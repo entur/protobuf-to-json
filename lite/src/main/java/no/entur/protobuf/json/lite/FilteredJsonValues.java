@@ -10,7 +10,6 @@ import no.entur.protobuf.json.filter.MaxStringLength;
 import no.entur.protobuf.json.path.FilterType;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -236,18 +235,16 @@ final class FilteredJsonValues {
                 writeName(name);
 
                 int encodeLength = Math.min(length, ((keep + 3) / 4) * 3);
-                ByteBuffer encoded = LiteJsonValues.encodeBase64(value.substring(0, encodeLength));
-                int encodedOffset = encoded.arrayOffset() + encoded.position();
+                String encoded = LiteJsonValues.encodeBase64(value.substring(0, encodeLength));
                 if (utf8) {
                     byte[] message = filter.getTruncateMessageUtf8();
                     byte[] buffer = getByteBuffer(keep + message.length + 10);
-                    int bufferLength = MaxStringLength.fill(encoded.array(), encodedOffset, keep, message, removed, buffer);
+                    int bufferLength = MaxStringLength.fill(encoded.getBytes(StandardCharsets.ISO_8859_1), 0, keep, message, removed, buffer);
                     generator.writeUTF8String(buffer, 0, bufferLength);
                 } else {
-                    String kept = new String(encoded.array(), encodedOffset, keep, StandardCharsets.ISO_8859_1);
                     char[] message = filter.getTruncateMessageChars();
                     char[] buffer = getCharBuffer(keep + message.length + 10);
-                    int bufferLength = MaxStringLength.fill(kept, keep, message, removed, buffer);
+                    int bufferLength = MaxStringLength.fill(encoded, keep, message, removed, buffer);
                     generator.writeString(buffer, 0, bufferLength);
                 }
                 return true;
@@ -257,7 +254,7 @@ final class FilteredJsonValues {
             return false;
         }
         writeName(name);
-        LiteJsonValues.writeBase64(generator, value, utf8);
+        LiteJsonValues.writeBase64(generator, value);
         return true;
     }
 

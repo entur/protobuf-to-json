@@ -294,7 +294,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
                 generator.writeString((String) value);
                 break;
             case BYTES:
-                LiteJsonValues.writeBase64(generator, (ByteString) value, utf8);
+                LiteJsonValues.writeBase64(generator, (ByteString) value);
                 break;
             case ENUM:
                 writeEnum(generator, enumNames != null ? enumNames : plans.getEnumNames(((Enum<?>) value).getDeclaringClass()), LiteEnumNames.getNumber(value));
@@ -393,7 +393,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
                 generator.writeString(((StringValue) message).getValue());
                 break;
             case BYTES_VALUE:
-                LiteJsonValues.writeBase64(generator, ((BytesValue) message).getValue(), utf8);
+                LiteJsonValues.writeBase64(generator, ((BytesValue) message).getValue());
                 break;
             case FLOAT_VALUE:
                 writeFloat(generator, ((FloatValue) message).getValue());

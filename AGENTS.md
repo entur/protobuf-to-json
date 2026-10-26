@@ -47,7 +47,7 @@ java -jar benchmarks/benchmark-full/target/benchmarks.jar -prof gc
 ## Conventions
 
 - 4 spaces indentation, Javadoc on public types and methods; javadoc is built (and checked) by every build
-- `path`, `api` and `lite` must only use APIs available on Android 8 (API level 26), checked by animal-sniffer;
+- `path`, `api` and `lite` must only use APIs available on Android 7 (API level 24), checked by animal-sniffer;
   no records, `List.of`, `String.repeat` and similar in their main code
 - tests use JUnit and Google Truth
 - the full protobuf writers must write the same as `JsonFormat` (see `AbstractJsonFormatConformanceTest` and

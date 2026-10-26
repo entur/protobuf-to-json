@@ -1,5 +1,6 @@
 package no.entur.protobuf.json.lite;
 
+import com.fasterxml.jackson.core.Base64Variants;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.json.UTF8JsonGenerator;
 import com.fasterxml.jackson.core.util.JsonGeneratorDelegate;
@@ -10,9 +11,6 @@ import com.google.protobuf.MessageLite;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -106,18 +104,16 @@ final class LiteJsonValues {
 
     // ---- bytes ----
 
-    static ByteBuffer encodeBase64(ByteString value) {
-        return Base64.getEncoder().encode(value.asReadOnlyByteBuffer());
+    // Jackson's MIME_NO_LINEFEEDS variant is standard base64 with padding, like java.util.Base64, which is not available
+    // before Android 8
+
+    static String encodeBase64(ByteString value) {
+        return Base64Variants.MIME_NO_LINEFEEDS.encode(value.toByteArray());
     }
 
-    static void writeBase64(JsonGenerator generator, ByteString value, boolean utf8) throws IOException {
-        ByteBuffer encoded = encodeBase64(value);
-        if (utf8) {
-            // base64 never needs escaping
-            generator.writeRawUTF8String(encoded.array(), encoded.arrayOffset() + encoded.position(), encoded.remaining());
-        } else {
-            generator.writeString(new String(encoded.array(), encoded.arrayOffset() + encoded.position(), encoded.remaining(), StandardCharsets.ISO_8859_1));
-        }
+    static void writeBase64(JsonGenerator generator, ByteString value) throws IOException {
+        byte[] bytes = value.toByteArray();
+        generator.writeBinary(Base64Variants.MIME_NO_LINEFEEDS, bytes, 0, bytes.length);
     }
 
     // ---- field masks ----
