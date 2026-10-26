@@ -67,7 +67,7 @@
         <support.directory>${project.basedir}/../support</support.directory>
 
         <protobuf.version>4.36.2</protobuf.version>
-        <jackson3.version>3.1.8</jackson3.version>
+        <jackson3.version>3.2.4</jackson3.version>
         <jackson2.version>2.22.4</jackson2.version>
         <jmh.version>1.37</jmh.version>
         <junit.version>6.1.3</junit.version>
