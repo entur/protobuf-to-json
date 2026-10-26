@@ -1,0 +1,16 @@
+name: Validate branch
+on:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+
+jobs:
+  validate-maven-build:
+    uses: entur/abt-gha-public/.github/workflows/maven-open-source-verify.yml@v2.0
+    permissions:
+      contents: read
+    # no secrets necessary
+    with:
+      # the stream module targets Java 24, the benchmarks Java 25
+      java-version: 25

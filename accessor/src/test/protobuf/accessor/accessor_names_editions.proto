@@ -1,0 +1,33 @@
+// Field presence, closed enums and delimited encoding with editions.
+edition = "2023";
+
+package accessor.names;
+
+option java_package = "no.entur.protobuf.json.accessor.names";
+option java_outer_classname = "AccessorNamesEditionsProto";
+
+enum ClosedColor {
+  option features.enum_type = CLOSED;
+  CLOSED_COLOR_RED = 1;
+  CLOSED_COLOR_BLUE = 2;
+}
+
+message AccessorNamesEditions {
+  int32 implicit = 1 [features.field_presence = IMPLICIT];
+  int32 explicit = 2;
+  ClosedColor closed = 3;
+  repeated ClosedColor closed_colors = 4;
+
+  // delimited like a group, and named like one: the accessors are named after the type
+  message GroupLike {
+    int32 a = 1;
+  }
+  GroupLike grouplike = 5 [features.message_encoding = DELIMITED];
+
+  // delimited, but not named like a group
+  GroupLike other_group = 6 [features.message_encoding = DELIMITED];
+
+  string unvalidated = 7 [features.utf8_validation = NONE];
+  repeated int32 expanded = 8 [features.repeated_field_encoding = EXPANDED];
+  string implicit_string = 9 [features.field_presence = IMPLICIT];
+}

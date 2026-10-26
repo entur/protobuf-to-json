@@ -1,0 +1,39 @@
+// Accessor names which protoc changes, and other proto3 features.
+syntax = "proto3";
+
+package accessor.names;
+
+option java_package = "no.entur.protobuf.json.accessor.names";
+option java_outer_classname = "AccessorNamesProto3";
+
+message AccessorNames3 {
+  // a repeated field, and a field with the name of its count or list accessor: both get their field numbers appended
+  repeated int32 foo = 1;
+  int32 foo_count = 2;
+  repeated string bar = 3;
+  string bar_list = 4;
+  map<string, string> baz = 5;
+  int32 baz_count = 6;
+
+  // would collide with methods of the base classes, so protoc appends an underscore
+  string class = 7;
+  int64 cached_size = 8;
+
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_A = 1;
+    KIND_B = 2;
+  }
+  repeated Kind kinds = 9;
+  Kind kind = 10;
+  optional Kind optional_kind = 11;
+  oneof choice {
+    string choice_string = 12;
+    Kind choice_kind = 13;
+    AccessorNames3 choice_message = 14;
+  }
+  map<string, Kind> kind_by_name = 15;
+  map<uint64, AccessorNames3> children = 16;
+  bytes data = 17;
+  optional bytes optional_data = 18;
+}

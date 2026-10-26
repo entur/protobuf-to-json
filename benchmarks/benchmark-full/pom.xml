@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-benchmarks</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-benchmark-full</artifactId>
+    <name>protobuf-to-json-benchmark-full</name>
+    <description>JMH benchmarks for the full protobuf writers (Jackson 3)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-transcode</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-stream</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-accessor</artifactId>
+        </dependency>
+        <!-- JsonFormat as a writer -->
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-utility</artifactId>
+        </dependency>
+        <!-- the test messages and the payloads -->
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-test-support</artifactId>
+        </dependency>
+        <!-- other libraries: HubSpot jackson-datatype-protobuf and curioswitch protobuf-jackson (Jackson 2) -->
+        <dependency>
+            <groupId>com.hubspot.jackson</groupId>
+            <artifactId>jackson3-datatype-protobuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.curioswitch.curiostack</groupId>
+            <artifactId>protobuf-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

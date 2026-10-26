@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-accessor</artifactId>
+    <name>protobuf-to-json-accessor</name>
+    <description>Writes full protobuf messages as JSON with code generated per message type, which reads the fields with their accessors (Java 24+, Jackson 3)</description>
+
+    <properties>
+        <!-- the ClassFile API -->
+        <maven.compiler.release>24</maven.compiler.release>
+        <maven.compiler.testRelease>24</maven.compiler.testRelease>
+    </properties>
+
+    <dependencies>
+        <!-- for the shared plans, the well-known types, google.protobuf.Any and messages which are not generated -->
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-transcode</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-transcode</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-api</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-utility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- messages with accessor names which protoc changes -->
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-accessor-test-messages</id>
+                        <goals>
+                            <goal>generate-test</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectories combine.self="override">
+                                <sourceDirectory>${project.basedir}/src/test/protobuf</sourceDirectory>
+                            </sourceDirectories>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

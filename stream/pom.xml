@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-stream</artifactId>
+    <name>protobuf-to-json-stream</name>
+    <description>Writes full protobuf messages as JSON through the generated serialization code (Java 24+, Jackson 3)</description>
+
+    <properties>
+        <!-- the ClassFile API -->
+        <maven.compiler.release>24</maven.compiler.release>
+        <maven.compiler.testRelease>24</maven.compiler.testRelease>
+    </properties>
+
+    <dependencies>
+        <!-- for the shared plans, the well-known types and google.protobuf.Any -->
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-transcode</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-transcode</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-api</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-utility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
