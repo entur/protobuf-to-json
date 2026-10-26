@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-benchmarks</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-benchmark-lite</artifactId>
+    <name>protobuf-to-json-benchmark-lite</name>
+    <description>JMH benchmarks for the protobuf lite writer (Jackson 2)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-lite</artifactId>
+        </dependency>
+        <!-- the generated lite test messages -->
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-lite</artifactId>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- the payloads as files, written from the full protobuf messages of the test-support module -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>write-payloads</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>no.entur.protobuf.json.test.PayloadFiles</mainClass>
+                            <!-- the full protobuf runtime only on the classpath of the plugin, not on the lite classpath -->
+                            <includeProjectDependencies>false</includeProjectDependencies>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <executableDependency>
+                                <groupId>no.entur.protobuf-to-json</groupId>
+                                <artifactId>protobuf-to-json-test-support</artifactId>
+                            </executableDependency>
+                            <arguments>
+                                <argument>${project.build.outputDirectory}/payloads</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>no.entur.protobuf-to-json</groupId>
+                        <artifactId>protobuf-to-json-test-support</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

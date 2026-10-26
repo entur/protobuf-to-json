@@ -1,0 +1,19 @@
+name: Validate, build and deploy to Maven Central
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  maven-build-and-release:
+    uses: entur/gha-maven-central/.github/workflows/maven-publish.yml@v1
+    secrets: inherit
+    permissions:
+      contents: write
+      issues: write
+    with:
+      next_version: minor
+      version_strategy: tag
+      version_tag_prefix: release-
+      java_version: 25

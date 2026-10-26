@@ -1,0 +1,59 @@
+// Accessor names which protoc changes, and other proto2 features.
+syntax = "proto2";
+
+package accessor.names;
+
+option java_package = "no.entur.protobuf.json.accessor.names";
+option java_outer_classname = "AccessorNamesProto2";
+
+message AccessorNames2 {
+  // would collide with methods of the base classes, so protoc appends an underscore
+  optional string class = 1;
+  optional int32 cached_size = 2;
+  optional int32 serialized_size = 3;
+  optional string unknown_fields = 4;
+  optional int32 default_instance_for_type = 5;
+  optional int32 parser_for_type = 6;
+  optional int32 all_fields = 7;
+  optional int32 descriptor_for_type = 8;
+  optional int32 initialization_error_string = 9;
+
+  // a repeated field, and a field with the name of its count or list accessor: both get their field numbers appended
+  repeated int32 foo = 10;
+  optional int32 foo_count = 11;
+  repeated string bar = 12;
+  optional string bar_list = 13;
+  map<string, int32> baz = 14;
+  optional int32 baz_count = 15;
+
+  // the same accessor name: both get their field numbers appended (and a JSON name of its own, so that the JSON names differ)
+  optional int32 same_name = 16;
+  optional int32 same__name = 17 [json_name = "sameName2"];
+
+  // underscores and digits
+  optional int32 _leading = 18;
+  optional int32 trailing_ = 19;
+  optional int32 double__underscore = 20;
+  optional int32 digit2letter = 21;
+  optional int32 x_1_y = 22;
+
+  // groups are named after their type
+  optional group MultiWord = 23 {
+    optional int32 a = 24;
+  }
+  repeated group RepeatedMultiWord = 25 {
+    optional int32 b = 26;
+  }
+
+  // closed; map values must have 0 as the first value
+  enum Color {
+    NO_COLOR = 0;
+    RED = 1;
+    BLUE = 2;
+  }
+  optional Color color = 27 [default = BLUE];
+  repeated Color colors = 28;
+  map<int32, Color> color_by_number = 29;
+  optional int64 with_default = 30 [default = -5];
+  required string required_field = 31;
+}
