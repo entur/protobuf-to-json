@@ -109,7 +109,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
@@ -117,6 +117,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
             m = ((Message.Builder) message).buildPartial();
         }
         write(m, generator);
+        return true;
     }
 
     @Override

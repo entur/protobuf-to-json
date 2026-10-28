@@ -35,14 +35,16 @@ public class FilteringAccessorProtobufJsonWriter implements ProtobufJsonWriter<M
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        MessageWriters.getFilteringWriter(m.getClass()).write(new FilteredJsonValues(filter, generator), null, 0, m, false, this);
+        FilteredJsonValues values = new FilteredJsonValues(filter, generator);
+        MessageWriters.getFilteringWriter(m.getClass()).write(values, null, 0, m, false, this);
+        return !values.getContext().isStopped();
     }
 
     @Override

@@ -248,16 +248,38 @@ public final class ReferenceFilter {
      */
 
     public List<Token> filter(String json, Output output, Set<List<Object>> untruncated) {
+        List<Token> tokens = tokens(json, untruncated);
+        if (maxSize == -1) {
+            return tokens;
+        }
+        return limit(tokens, output);
+    }
+
+    /**
+     * Whether the max size truncates a document, i.e. whether writing stops before all of its values are written.
+     *
+     * @param json        document
+     * @param output      output, for measuring tokens
+     * @param untruncated locations of strings which are not text, and so are never truncated
+     * @return true if truncated
+     */
+
+    public boolean truncates(String json, Output output, Set<List<Object>> untruncated) {
+        if (maxSize == -1) {
+            return false;
+        }
+        List<Token> tokens = tokens(json, untruncated);
+        return limit(tokens, output).size() < tokens.size();
+    }
+
+    private List<Token> tokens(String json, Set<List<Object>> untruncated) {
         Object tree;
         try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), json)) {
             tree = parse(parser, parser.nextToken());
         }
         List<Token> tokens = new ArrayList<>();
         addTokens(null, filter(tree, new ArrayList<>(), new ArrayList<>(), untruncated), tokens);
-        if (maxSize == -1) {
-            return tokens;
-        }
-        return limit(tokens, output);
+        return tokens;
     }
 
     private static Object parse(JsonParser parser, JsonToken token) {

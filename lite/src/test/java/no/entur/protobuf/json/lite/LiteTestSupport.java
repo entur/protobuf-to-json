@@ -57,11 +57,23 @@ public final class LiteTestSupport {
      */
 
     public static String writeChars(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message) throws IOException {
+        return writtenChars(writer, message).json();
+    }
+
+    /**
+     * The output of a write, and whether the whole message was written.
+     */
+
+    public record Written(String json, boolean complete) {
+    }
+
+    public static Written writtenChars(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message) throws IOException {
         StringWriter output = new StringWriter();
+        boolean complete;
         try (JsonGenerator generator = FACTORY.createGenerator(output)) {
-            writer.write(message, generator);
+            complete = writer.write(message, generator);
         }
-        return output.toString();
+        return new Written(output.toString(), complete);
     }
 
     /**
@@ -69,11 +81,16 @@ public final class LiteTestSupport {
      */
 
     public static String writeBytes(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message, boolean combineSurrogates) throws IOException {
+        return writtenBytes(writer, message, combineSurrogates).json();
+    }
+
+    public static Written writtenBytes(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message, boolean combineSurrogates) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
+        boolean complete;
         try (JsonGenerator generator = (combineSurrogates ? COMBINING_FACTORY : FACTORY).createGenerator(output)) {
-            writer.write(message, generator);
+            complete = writer.write(message, generator);
         }
-        return output.toString(StandardCharsets.UTF_8);
+        return new Written(output.toString(StandardCharsets.UTF_8), complete);
     }
 
     private static ReferenceFilter.Output output(JsonFactory factory, boolean utf8) {

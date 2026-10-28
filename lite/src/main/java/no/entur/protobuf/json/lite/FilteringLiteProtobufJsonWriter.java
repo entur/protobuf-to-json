@@ -59,7 +59,7 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
     }
 
     @Override
-    public void write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
         MessageLite m = LiteProtobufJsonWriter.toMessage(message);
         FilteredJsonValues values = new FilteredJsonValues(filter, generator);
         LiteMessagePlan plan = plans.get(m.getClass());
@@ -68,6 +68,7 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
         } else {
             writeMessage(m, plan, values, null, null, 0, false);
         }
+        return !values.getContext().isStopped();
     }
 
     @Override

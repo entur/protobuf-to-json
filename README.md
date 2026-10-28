@@ -184,7 +184,11 @@ Max size counts the JSON as written by a Jackson generator with default settings
 
 A field name is
 only written together with its value, and room for the closing brackets is reserved, so the output is always valid
-JSON. 
+JSON. `write(..)` returns `false` if writing stopped because of the max size, i.e. the output is truncated:
+
+```java
+boolean complete = writer.write(message, generator);
+```
 
 A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.

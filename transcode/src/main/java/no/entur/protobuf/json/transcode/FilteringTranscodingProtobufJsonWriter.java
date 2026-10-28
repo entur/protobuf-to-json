@@ -87,14 +87,16 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        write(m, new FilteredJsonValues(filter, generator));
+        FilteredJsonValues values = new FilteredJsonValues(filter, generator);
+        write(m, values);
+        return !values.getContext().isStopped();
     }
 
     @Override
