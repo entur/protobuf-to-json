@@ -190,6 +190,8 @@ JSON. `write(..)` returns `false` if writing stopped because of the max size, i.
 boolean complete = writer.write(message, generator);
 ```
 
+Only the max size makes `write(..)` return `false`; shortened strings (max string length), and pruned or anonymized values, do not.
+
 A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.
 

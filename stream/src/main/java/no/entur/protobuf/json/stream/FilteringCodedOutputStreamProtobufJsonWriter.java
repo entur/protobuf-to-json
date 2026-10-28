@@ -51,7 +51,7 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
         } else {
             new FilteringCodedOutputStreamJsonSink(plans, transcoder, values).write(m);
         }
-        return !values.getContext().isStopped();
+        return !values.isStopped();
     }
 
     @Override

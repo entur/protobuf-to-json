@@ -44,7 +44,7 @@ public class FilteringAccessorProtobufJsonWriter implements ProtobufJsonWriter<M
         }
         FilteredJsonValues values = new FilteredJsonValues(filter, generator);
         MessageWriters.getFilteringWriter(m.getClass()).write(values, null, 0, m, false, this);
-        return !values.getContext().isStopped();
+        return !values.isStopped();
     }
 
     @Override

@@ -68,7 +68,7 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
         } else {
             writeMessage(m, plan, values, null, null, 0, false);
         }
-        return !values.getContext().isStopped();
+        return !values.isStopped();
     }
 
     @Override
