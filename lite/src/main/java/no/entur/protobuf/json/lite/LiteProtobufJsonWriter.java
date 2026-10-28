@@ -111,7 +111,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
     }
 
     @Override
-    public void write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
         MessageLite m = toMessage(message);
         LiteMessagePlan plan = plans.get(m.getClass());
         boolean utf8 = LiteJsonValues.isUtf8(generator);
@@ -120,6 +120,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
         } else {
             writeMessage(m, plan, generator, utf8, null);
         }
+        return true;
     }
 
     @Override

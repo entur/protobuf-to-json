@@ -70,9 +70,10 @@ public final class CurioswitchProtobufJackson {
     public static ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> createWriter(MessageMarshaller marshaller) {
         return new ProtobufJsonWriter<>() {
             @Override
-            public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+            public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
                 // writes with its own (Jackson 2) generator
                 generator.writeRawValue(writeAsString(message));
+                return true;
             }
 
             @Override

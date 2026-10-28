@@ -161,22 +161,27 @@ public class FilteringLiteProtobufJsonWriterTest {
         ReferenceFilter referenceFilter = filter.toReferenceFilter();
 
         ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer = filter.build();
-        String actualChars = LiteTestSupport.writeChars(writer, message);
-        String actualBytes = LiteTestSupport.writeBytes(writer, message, true);
+        LiteTestSupport.Written actualChars = LiteTestSupport.writtenChars(writer, message);
+        LiteTestSupport.Written actualBytes = LiteTestSupport.writtenBytes(writer, message, true);
         // surrogate pairs escaped (the Jackson 2 default) take more room
-        String escaped = LiteTestSupport.writeBytes(writer, message, false);
+        LiteTestSupport.Written escaped = LiteTestSupport.writtenBytes(writer, message, false);
 
         String description = filter + " " + json;
-        assertWithMessage("chars " + description).that(actualChars).isEqualTo(referenceFilter.process(json, LiteTestSupport.CHARS, untruncated));
-        assertWithMessage("bytes " + description).that(actualBytes).isEqualTo(referenceFilter.process(json, LiteTestSupport.UTF8, untruncated));
-        assertWithMessage("escaped " + description).that(escaped).isEqualTo(referenceFilter.process(json, LiteTestSupport.UTF8_ESCAPED_SURROGATES, untruncated));
+        assertWithMessage("chars " + description).that(actualChars.json()).isEqualTo(referenceFilter.process(json, LiteTestSupport.CHARS, untruncated));
+        assertWithMessage("bytes " + description).that(actualBytes.json()).isEqualTo(referenceFilter.process(json, LiteTestSupport.UTF8, untruncated));
+        assertWithMessage("escaped " + description).that(escaped.json()).isEqualTo(referenceFilter.process(json, LiteTestSupport.UTF8_ESCAPED_SURROGATES, untruncated));
+
+        // the writer reports truncation where the reference filter truncates
+        assertWithMessage("chars complete " + description).that(actualChars.complete()).isEqualTo(!referenceFilter.truncates(json, LiteTestSupport.CHARS, untruncated));
+        assertWithMessage("bytes complete " + description).that(actualBytes.complete()).isEqualTo(!referenceFilter.truncates(json, LiteTestSupport.UTF8, untruncated));
+        assertWithMessage("escaped complete " + description).that(escaped.complete()).isEqualTo(!referenceFilter.truncates(json, LiteTestSupport.UTF8_ESCAPED_SURROGATES, untruncated));
 
         if (filter.maxSize() != -1 && (json.startsWith("{") || json.startsWith("["))) {
-            assertWithMessage("chars " + description).that(actualChars.length()).isAtMost(filter.maxSize());
-            assertWithMessage("bytes " + description).that(actualBytes.getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
-            assertWithMessage("escaped " + description).that(escaped.getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
+            assertWithMessage("chars " + description).that(actualChars.json().length()).isAtMost(filter.maxSize());
+            assertWithMessage("bytes " + description).that(actualBytes.json().getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
+            assertWithMessage("escaped " + description).that(escaped.json().getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
         }
-        return actualChars;
+        return actualChars.json();
     }
 
     private String write(MessageLiteOrBuilder message, Filter filter) throws Exception {
@@ -189,6 +194,18 @@ public class FilteringLiteProtobufJsonWriterTest {
 
     private String write(MessageLiteOrBuilder message, Filter filter, Set<List<Object>> untruncated) throws Exception {
         return assertSameAsReferenceFilter(message, LiteTestSupport.writeChars(unfiltered, message), filter, untruncated);
+    }
+
+    @Test
+    public void writeReportsTruncation() throws Exception {
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalInt32(1).setOptionalString("a".repeat(100)).build();
+
+        assertThat(LiteTestSupport.writtenChars(unfiltered, message).complete()).isTrue();
+        assertThat(LiteTestSupport.writtenChars(LiteTestSupport.newBuilder().withMaxSize(1024).build(), message).complete()).isTrue();
+
+        LiteTestSupport.Written truncated = LiteTestSupport.writtenChars(LiteTestSupport.newBuilder().withMaxSize(48).build(), message);
+        assertThat(truncated.json()).isEqualTo("{\"optionalInt32\":1}");
+        assertThat(truncated.complete()).isFalse();
     }
 
     @Test

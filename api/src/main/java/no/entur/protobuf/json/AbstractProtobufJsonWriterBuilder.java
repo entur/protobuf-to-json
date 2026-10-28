@@ -57,7 +57,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
 
     /**
      * Max size of the JSON output, in bytes when writing to an output stream, otherwise in characters.
-     * The output is cut at the first value which does not fit, and the open objects and arrays are closed.
+     * The output is cut at the first value which does not fit, and the open objects and arrays are closed;
+     * {@linkplain ProtobufJsonWriter#write(Object, Object)} then returns false.
      *
      * @param maxSize max size, or -1 for no limit
      * @return this builder

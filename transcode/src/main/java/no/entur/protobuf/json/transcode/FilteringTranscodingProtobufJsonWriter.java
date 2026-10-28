@@ -87,14 +87,14 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        write(m, new FilteredJsonValues(filter, generator));
+        return write(m, new FilteredJsonValues(filter, generator));
     }
 
     @Override
@@ -107,10 +107,11 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
      *
      * @param message message
      * @param values  state of the write
+     * @return true if the whole message was written, false if writing stopped because of the max size
      * @throws IOException if writing fails
      */
 
-    public void write(Message message, FilteredJsonValues values) throws IOException {
+    public boolean write(Message message, FilteredJsonValues values) throws IOException {
         MessagePlan plan = plans.get(message.getDescriptorForType());
         if (plan.wellKnownType != null) {
             writeWellKnown(plan.wellKnownType, message, values, null, 0, false);
@@ -118,6 +119,7 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
             byte[] bytes = message.toByteArray();
             writeMessage(bytes, 0, bytes.length, plan, values, null, null, 0, false);
         }
+        return !values.isStopped();
     }
 
     /**

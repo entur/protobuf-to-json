@@ -36,8 +36,9 @@ public final class HubSpotJacksonDatatypeProtobuf {
     public static ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> createWriter(JsonMapper mapper) {
         return new ProtobufJsonWriter<>() {
             @Override
-            public void write(MessageOrBuilder message, JsonGenerator generator) {
+            public boolean write(MessageOrBuilder message, JsonGenerator generator) {
                 mapper.writeValue(generator, message);
+                return true;
             }
 
             @Override
