@@ -85,7 +85,7 @@
         <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
-        <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
+        <maven-site-plugin.version>3.22.0</maven-site-plugin.version>
         <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
         <animal-sniffer-maven-plugin.version>1.28</animal-sniffer-maven-plugin.version>
         <exec-maven-plugin.version>3.6.4</exec-maven-plugin.version>
