@@ -154,7 +154,7 @@ Build a writer with the filters you want:
 | Option | Effect |
 |---|---|
 | `withAnonymizePaths(...)`, `withAnonymizeKeys(...)` | keep the structure, but replace every scalar value (strings, numbers, booleans and null) with `"*"` |
-| `withPrunePaths(...)`, `withPruneKeys(...)` | replace the whole value with `"[removed]"`; the value is not written. A proto3 scalar without presence is still read, to tell it apart from the default |
+| `withPrunePaths(...)`, `withPruneKeys(...)` | replace the whole value with `"[removed]"`; the value is not read |
 | `withMaxStringLength(n)` | truncate text and bytes values longer than `n` characters to `"<first n characters>... + <number of removed characters>"` |
 | `withMaxSize(n)` | stop writing at the first value which does not fit within `n` bytes (characters, for character-based generators), then close the open objects and arrays |
 | `withAnonymizeMessage(...)`, `withPruneMessage(...)`, `withTruncateMessage(...)` | replacement texts |
@@ -188,19 +188,6 @@ JSON.
 
 A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.
-
-### Prune and reading
-
-Prune replaces a present value and does not write it. It does not always avoid reading the value.
-
-Proto3 scalar fields without presence (not `optional`) are omitted when they hold the default, and replaced when they
-are set. Telling those apart requires reading the value, including a pruned string or bytes field. The accessor and
-lite writers do that. Fields with presence (`optional`, proto2, messages) are not read when pruned: only `hasX()` or
-the repeated or map count is used, and the elements are not read.
-
-The stream writer receives scalar values from protobuf's serializer and then discards a pruned one; a pruned message is
-not serialized. The transcoding writer serializes the message first, then skips a pruned field's bytes instead of
-decoding them.
 
 ## Performance
 By message size as JSON, without filtering; the best value of each column in **bold**. See [PERFORMANCE.md](PERFORMANCE.md)
