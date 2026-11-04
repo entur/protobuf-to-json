@@ -30,7 +30,8 @@ import java.util.logging.Logger;
  * <br><br>
  * Messages which are not generated (i.e. {@linkplain com.google.protobuf.DynamicMessage}), the well-known types (as root
  * values), and message classes a writer cannot be generated for, are transcoded instead. A generation failure is logged
- * once per message class; DynamicMessage and the well-known types are expected fallbacks and are not logged.
+ * at fine, once per message class, when that level is enabled. DynamicMessage and the well-known types are expected
+ * fallbacks and are not logged.
  * <br><br>
  * Internal; public only because the generated writers may be defined in the packages of the messages.
  */
@@ -131,7 +132,7 @@ public final class MessageWriters {
     }
 
     /**
-     * Log a generation failure once per message class. Expected fallbacks are not logged.
+     * Log a generation failure at fine, once per message class, when that level is enabled. Expected fallbacks are not logged.
      *
      * @param type    message class
      * @param failure why no writer could be generated, or null
@@ -141,9 +142,17 @@ public final class MessageWriters {
         if (failure == null || DynamicMessage.class.isAssignableFrom(type)) {
             return;
         }
-        if (LOGGED_FALLBACKS.add(type)) {
-            LOGGER.log(Level.WARNING, "Unable to generate a JSON writer for " + type.getName() + "; transcoding instead", failure);
+        if (!isDebugEnabled()) {
+            return;
         }
+        if (LOGGED_FALLBACKS.add(type)) {
+            LOGGER.log(Level.FINE, "Unable to generate a JSON writer for " + type.getName() + "; transcoding instead", failure);
+        }
+    }
+
+    /** Fine is this library's debug level ({@code java.util.logging} has no debug level of its own). */
+    private static boolean isDebugEnabled() {
+        return LOGGER.isLoggable(Level.FINE);
     }
 
     private static Generated transcoding(boolean filtering, Throwable failure) {

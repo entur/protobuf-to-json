@@ -51,7 +51,7 @@ public class MessageWritersFallbackTest {
             assertThat(generated.transcoding()).isTrue();
             assertThat(generated.failure()).isNotNull();
             assertThat(records).hasSize(1);
-            assertThat(records.get(0).getLevel()).isEqualTo(Level.WARNING);
+            assertThat(records.get(0).getLevel()).isEqualTo(Level.FINE);
             assertThat(records.get(0).getMessage()).contains(NotAGeneratedMessage.class.getName());
             assertThat(records.get(0).getThrown()).isSameInstanceAs(generated.failure());
         } finally {
@@ -80,6 +80,8 @@ public class MessageWritersFallbackTest {
             }
         };
         handler.setLevel(Level.ALL);
+        Level previous = logger.getLevel();
+        logger.setLevel(Level.ALL);
         logger.addHandler(handler);
         try {
             MessageWriters.logFallback(Timestamp.class, null);
@@ -87,6 +89,38 @@ public class MessageWritersFallbackTest {
             assertThat(records).isEmpty();
         } finally {
             logger.removeHandler(handler);
+            logger.setLevel(previous);
+        }
+    }
+
+    @Test
+    public void doesNotLogWhenDebugIsDisabled() {
+        List<LogRecord> records = new ArrayList<>();
+        Logger logger = Logger.getLogger(MessageWriters.class.getName());
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        handler.setLevel(Level.ALL);
+        Level previous = logger.getLevel();
+        logger.setLevel(Level.INFO);
+        logger.addHandler(handler);
+        try {
+            MessageWriters.logFallback(String.class, new IllegalStateException("not generated"));
+            assertThat(records).isEmpty();
+        } finally {
+            logger.removeHandler(handler);
+            logger.setLevel(previous);
         }
     }
 }

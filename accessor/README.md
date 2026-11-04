@@ -152,8 +152,8 @@ These messages are transcoded instead, with `TranscodingProtobufJsonWriter`, whi
  * messages which are not generated, i.e. `DynamicMessage`
  * well-known types as the root message
  * message types for which no code can be generated: if an accessor is not found as expected, or if the class loaders of
-   the messages and of this library cannot see each other's classes. That failure is logged once per message class.
-   DynamicMessage and the well-known types are expected fallbacks and are not logged.
+   the messages and of this library cannot see each other's classes. That failure is logged at fine, once per message
+   class, when that level is enabled. DynamicMessage and the well-known types are expected fallbacks and are not logged.
 
 Message types registered with `withMessageTypes(..)` fail instead.
 
