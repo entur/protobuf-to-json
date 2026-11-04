@@ -4,6 +4,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.plan.FilteredJsonValues;
 import no.entur.protobuf.json.plan.MessagePlan.Plans;
@@ -26,8 +27,12 @@ public class FilteringAccessorProtobufJsonWriter implements ProtobufJsonWriter<M
     private final JsonFilter filter;
 
     protected FilteringAccessorProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter) {
+        this(typeRegistry, filter, UnresolvedAny.FAIL);
+    }
+
+    protected FilteringAccessorProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny) {
         this.filter = filter;
-        this.transcoder = new FilteringTranscodingProtobufJsonWriter(plans, typeRegistry, filter);
+        this.transcoder = new FilteringTranscodingProtobufJsonWriter(plans, typeRegistry, filter, unresolvedAny);
     }
 
     public JsonFilter getFilter() {

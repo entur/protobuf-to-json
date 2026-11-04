@@ -25,6 +25,7 @@ import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 import no.entur.protobuf.json.AbstractProtobufJsonWriterBuilder;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
 
@@ -49,7 +50,7 @@ import java.util.Map;
  *     <li>extensions are not written</li>
  * </ul>
  * Like JsonFormat, google.protobuf.Any types must be registered (see {@linkplain Builder#withAnyType(String, MessageLite)}),
- * otherwise writing fails; the well-known types are always registered.
+ * otherwise writing fails, unless {@link UnresolvedAny#VALUE} is set. The well-known types are always registered.
  * <br><br>
  * Use the {@linkplain #newBuilder() builder} for filtering (anonymize and prune paths, max string length and max size);
  * see {@linkplain FilteringLiteProtobufJsonWriter}. Implementations are thread-safe.
@@ -97,17 +98,23 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
 
             JsonFilter filter = buildFilter();
             if (filter != null) {
-                return new FilteringLiteProtobufJsonWriter(types, filter);
+                return new FilteringLiteProtobufJsonWriter(types, filter, unresolvedAny);
             }
-            return new LiteProtobufJsonWriter(types);
+            return new LiteProtobufJsonWriter(types, unresolvedAny);
         }
     }
 
     private final LiteMessagePlan.Plans plans = new LiteMessagePlan.Plans();
     private final Map<String, MessageLite> anyTypes;
+    private final UnresolvedAny unresolvedAny;
 
     protected LiteProtobufJsonWriter(Map<String, MessageLite> anyTypes) {
+        this(anyTypes, UnresolvedAny.FAIL);
+    }
+
+    protected LiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, UnresolvedAny unresolvedAny) {
         this.anyTypes = anyTypes;
+        this.unresolvedAny = unresolvedAny;
     }
 
     @Override
@@ -454,7 +461,17 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
             generator.writeEndObject();
             return;
         }
-        MessageLite content = LiteJsonValues.parse(findType(typeUrl), any.getValue());
+        MessageLite prototype = findType(typeUrl);
+        if (prototype == null) {
+            generator.writeStartObject();
+            generator.writeFieldName(TYPE_NAME);
+            generator.writeString(typeUrl);
+            generator.writeFieldName(VALUE_NAME);
+            LiteJsonValues.writeBase64(generator, any.getValue());
+            generator.writeEndObject();
+            return;
+        }
+        MessageLite content = LiteJsonValues.parse(prototype, any.getValue());
         LiteMessagePlan plan = plans.get(content.getClass());
         if (plan.wellKnownType != null) {
             generator.writeStartObject();
@@ -469,12 +486,16 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
     }
 
     private MessageLite findType(String typeUrl) throws InvalidProtocolBufferException {
-        return findType(anyTypes, typeUrl);
+        return findType(anyTypes, typeUrl, unresolvedAny);
     }
 
     static MessageLite findType(Map<String, MessageLite> anyTypes, String typeUrl) throws InvalidProtocolBufferException {
+        return findType(anyTypes, typeUrl, UnresolvedAny.FAIL);
+    }
+
+    static MessageLite findType(Map<String, MessageLite> anyTypes, String typeUrl, UnresolvedAny unresolvedAny) throws InvalidProtocolBufferException {
         MessageLite prototype = anyTypes.get(LiteJsonValues.getTypeName(typeUrl));
-        if (prototype == null) {
+        if (prototype == null && unresolvedAny != UnresolvedAny.VALUE) {
             throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
         }
         return prototype;

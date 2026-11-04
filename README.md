@@ -59,6 +59,9 @@ public protobuf APIs and runs on Java 17, but is the slowest of the three.
 * out of range `google.protobuf.Timestamp` and `google.protobuf.Duration` values are written as objects, rather than failing
 * NaN and infinity `google.protobuf.Value` numbers are written as strings, rather than failing
 * escaping is left to the generator, so i.e. `=` and `<` are not written as unicode escapes
+* an unregistered `google.protobuf.Any` fails the write, as JsonFormat does, unless
+  `withUnresolvedAny(UnresolvedAny.VALUE)` is set. That writes `{"@type": url, "value": base64}` and does not parse
+  the payload. A type URL without a `/` still fails. An empty Any is still `{}`
 
 No JSON key is written twice:
 
@@ -118,7 +121,8 @@ from JsonFormat:
    (`multiWordGroupField` rather than `multiwordgroupfield`)
  * extensions are not written
  * as for the full protobuf writers: out of range `Timestamp`/`Duration` values are written as objects, NaN `Value`
-   numbers as strings, and escaping is left to the generator
+   numbers as strings, and escaping is left to the generator. An unregistered `google.protobuf.Any` fails the write
+   unless `withUnresolvedAny(UnresolvedAny.VALUE)` is set, which writes `{"@type": url, "value": base64}`
 
 `writeAsString` writes characters, so max size then counts characters. Jackson 2 generators which write UTF-8 escape
 surrogate pairs (i.e. emojis) as `\uXXXX\uXXXX` unless `COMBINE_UNICODE_SURROGATES_IN_UTF8` is enabled; max size takes this

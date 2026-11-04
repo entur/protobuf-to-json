@@ -27,6 +27,7 @@ import com.google.protobuf.util.FieldMaskUtil;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.AbstractProtobufJsonWriterBuilder;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
 import no.entur.protobuf.json.plan.JsonValues;
@@ -59,7 +60,7 @@ import java.util.Set;
  *     <li>out of range timestamps and durations are written as objects rather than failing</li>
  *     <li>NaN and infinity values of google.protobuf.Value are written as strings rather than failing</li>
  * </ul>
- * Like JsonFormat, unresolvable google.protobuf.Any types fail.
+ * Like JsonFormat, an unregistered google.protobuf.Any fails the write, unless {@link UnresolvedAny#VALUE} is set on the builder.
  * <br><br>
  * Use the {@linkplain #newBuilder() builder} for filtering (anonymize and prune paths, max string length and max size);
  * see {@linkplain FilteringTranscodingProtobufJsonWriter}.
@@ -92,9 +93,9 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
         public ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> build() {
             JsonFilter filter = buildFilter();
             if (filter != null) {
-                return new FilteringTranscodingProtobufJsonWriter(new Plans(), typeRegistry, filter);
+                return new FilteringTranscodingProtobufJsonWriter(new Plans(), typeRegistry, filter, unresolvedAny);
             }
-            return new TranscodingProtobufJsonWriter(new Plans(), typeRegistry);
+            return new TranscodingProtobufJsonWriter(new Plans(), typeRegistry, unresolvedAny);
         }
     }
 
@@ -102,10 +103,16 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
 
     private final Plans plans;
     private final JsonFormat.TypeRegistry typeRegistry;
+    private final UnresolvedAny unresolvedAny;
 
     public TranscodingProtobufJsonWriter(Plans plans, JsonFormat.TypeRegistry typeRegistry) {
+        this(plans, typeRegistry, UnresolvedAny.FAIL);
+    }
+
+    public TranscodingProtobufJsonWriter(Plans plans, JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
         this.plans = plans;
         this.typeRegistry = typeRegistry;
+        this.unresolvedAny = unresolvedAny;
     }
 
     @Override
@@ -514,8 +521,13 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
             generator.writeEndObject();
             return;
         }
-        MessagePlan plan = plans.get(findDescriptor(typeUrl));
+        Descriptor descriptor = findDescriptor(typeUrl);
         byte[] content = any.getValue().toByteArray();
+        if (descriptor == null) {
+            writeUnresolved(typeUrl, content, generator);
+            return;
+        }
+        MessagePlan plan = plans.get(descriptor);
         if (plan.wellKnownType != null) {
             generator.writeStartObject();
             generator.writeName("@type");
@@ -528,6 +540,15 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
         }
     }
 
+    private void writeUnresolved(String typeUrl, byte[] content, JsonGenerator generator) {
+        generator.writeStartObject();
+        generator.writeName("@type");
+        generator.writeString(typeUrl);
+        generator.writeName("value");
+        JsonValues.writeBase64(generator, content, 0, content.length);
+        generator.writeEndObject();
+    }
+
     private Descriptor findDescriptor(String typeUrl) throws InvalidProtocolBufferException {
         // same as JsonFormat
         int index = typeUrl.lastIndexOf('/');
@@ -535,7 +556,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
             throw new InvalidProtocolBufferException("Invalid type url found: " + typeUrl);
         }
         Descriptor descriptor = typeRegistry.find(typeUrl.substring(index + 1));
-        if (descriptor == null) {
+        if (descriptor == null && unresolvedAny != UnresolvedAny.VALUE) {
             throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
         }
         return descriptor;

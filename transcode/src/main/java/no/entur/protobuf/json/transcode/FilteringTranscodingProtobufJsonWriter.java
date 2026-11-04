@@ -27,6 +27,7 @@ import com.google.protobuf.WireFormat;
 import com.google.protobuf.util.FieldMaskUtil;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
 import no.entur.protobuf.json.path.FilterType;
@@ -75,11 +76,17 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     private final Plans plans;
     private final JsonFormat.TypeRegistry typeRegistry;
     private final JsonFilter filter;
+    private final UnresolvedAny unresolvedAny;
 
     public FilteringTranscodingProtobufJsonWriter(Plans plans, JsonFormat.TypeRegistry typeRegistry, JsonFilter filter) {
+        this(plans, typeRegistry, filter, UnresolvedAny.FAIL);
+    }
+
+    public FilteringTranscodingProtobufJsonWriter(Plans plans, JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny) {
         this.plans = plans;
         this.typeRegistry = typeRegistry;
         this.filter = filter;
+        this.unresolvedAny = unresolvedAny;
     }
 
     public JsonFilter getFilter() {
@@ -693,8 +700,12 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
             values.endObject();
             return true;
         }
-        MessagePlan plan = plans.get(findDescriptor(typeUrl));
+        Descriptor descriptor = findDescriptor(typeUrl);
         byte[] content = any.getValue().toByteArray();
+        if (descriptor == null) {
+            return writeUnresolved(typeUrl, content, values, name, nameSize, anonymize);
+        }
+        MessagePlan plan = plans.get(descriptor);
         if (plan.wellKnownType != null) {
             if (!values.startObject(name, nameSize)) {
                 return false;
@@ -715,6 +726,26 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
         return writeMessage(content, 0, content.length, plan, values, typeUrl, name, nameSize, anonymize);
     }
 
+    private boolean writeUnresolved(String typeUrl, byte[] content, FilteredJsonValues values, SerializableString name, int nameSize, boolean anonymize) {
+        if (!values.startObject(name, nameSize)) {
+            return false;
+        }
+        boolean writing = writeTypeUrl(values, typeUrl, anonymize);
+        if (writing) {
+            FilterType type = anonymize ? FilterType.ANON : values.match(FilteredJsonValues.VALUE_NAME);
+            int valueNameSize = values.getNameSize(FilteredJsonValues.VALUE_NAME);
+            if (type == FilterType.PRUNE) {
+                writing = values.writePruned(FilteredJsonValues.VALUE_NAME, valueNameSize);
+            } else if (type == FilterType.ANON) {
+                writing = values.writeAnonymized(FilteredJsonValues.VALUE_NAME, valueNameSize);
+            } else {
+                writing = values.writeBase64(FilteredJsonValues.VALUE_NAME, valueNameSize, content, 0, content.length);
+            }
+        }
+        values.endObject();
+        return writing;
+    }
+
     private Descriptor findDescriptor(String typeUrl) throws InvalidProtocolBufferException {
         // same as JsonFormat
         int index = typeUrl.lastIndexOf('/');
@@ -722,7 +753,7 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
             throw new InvalidProtocolBufferException("Invalid type url found: " + typeUrl);
         }
         Descriptor descriptor = typeRegistry.find(typeUrl.substring(index + 1));
-        if (descriptor == null) {
+        if (descriptor == null && unresolvedAny != UnresolvedAny.VALUE) {
             throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
         }
         return descriptor;

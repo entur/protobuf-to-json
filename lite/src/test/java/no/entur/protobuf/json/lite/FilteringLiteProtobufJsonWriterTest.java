@@ -18,6 +18,7 @@ import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesP
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedEnum;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedMessage;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.ReferenceFilter;
 import no.entur.protobuf.json.path.PathExpressions;
 import no.entur.protobuf.json.test.protobufjackson.GithubApi.SearchResponse;
@@ -124,6 +125,38 @@ public class FilteringLiteProtobufJsonWriterTest {
             messages.add(new TestMessage(columns[0], message, new HashSet<>(untruncated)));
         }
         return messages;
+    }
+
+    @Test
+    public void unresolvedAnyIsFilteredLikeItsJson() throws Exception {
+        Any any = Any.newBuilder()
+                .setTypeUrl("type.googleapis.com/unknown.Type")
+                .setValue(ByteString.copyFrom(new byte[]{0, 1, 2, (byte) 0xff}))
+                .build();
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalAny(any).build();
+        ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> plain = LiteTestSupport.newBuilder().withUnresolvedAny(UnresolvedAny.VALUE).build();
+        String json = LiteTestSupport.writeChars(plain, message);
+        String root = LiteTestSupport.writeChars(plain, any);
+        assertThat(json).isEqualTo("{\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}}");
+        assertThat(root).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}");
+
+        assertLiteUnresolved(message, json, Filter.anonymize("$.optionalAny.value"));
+        assertLiteUnresolved(message, json, Filter.prune("$.optionalAny"));
+        assertLiteUnresolved(message, json, Filter.prune("$.optionalAny.value"));
+        assertLiteUnresolved(message, json, new Filter(List.of(), List.of(), 4, -1));
+        assertLiteUnresolved(any, root, Filter.anonymize("$.value"));
+    }
+
+    private static void assertLiteUnresolved(MessageLiteOrBuilder message, String json, Filter filter) throws Exception {
+        ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer = LiteTestSupport.newBuilder()
+                .withUnresolvedAny(UnresolvedAny.VALUE)
+                .withAnonymizePaths(filter.anonymizes())
+                .withPrunePaths(filter.prunes())
+                .withMaxStringLength(filter.maxStringLength())
+                .withMaxSize(filter.maxSize())
+                .build();
+        String expected = filter.toReferenceFilter().process(json, LiteTestSupport.CHARS, Set.of());
+        assertThat(LiteTestSupport.writeChars(writer, message)).isEqualTo(expected);
     }
 
     @Test

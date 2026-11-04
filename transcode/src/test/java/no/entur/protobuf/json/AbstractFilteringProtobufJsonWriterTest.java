@@ -126,6 +126,8 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
 
     protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> filtered(Filter filter);
 
+    protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> unresolvedAnyWriter(Filter filter);
+
     @Test
     public void proto3() throws Exception {
         compareRandomMessages(TestAllTypesProto3::newBuilder);
@@ -206,6 +208,40 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         return actualBytes;
     }
 
+
+    @Test
+    public void unresolvedAnyIsFilteredLikeItsJson() throws Exception {
+        Any any = Any.newBuilder()
+                .setTypeUrl("type.googleapis.com/unknown.Type")
+                .setValue(ByteString.copyFrom(new byte[]{0, 1, 2, (byte) 0xff}))
+                .build();
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalAny(any).build();
+        Filter none = new Filter(List.of(), List.of(), -1, -1);
+        String json = TestSupport.writeBytes(unresolvedAnyWriter(none), message);
+        String root = TestSupport.writeBytes(unresolvedAnyWriter(none), any);
+        assertThat(json).isEqualTo("{\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}}");
+        assertThat(root).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}");
+
+        for (Filter filter : List.of(
+                Filter.anonymize("$.optionalAny.value"),
+                Filter.anonymize("$.optionalAny"),
+                Filter.prune("$.optionalAny.value"),
+                Filter.prune("$.optionalAny"),
+                Filter.maxStringLength(4),
+                Filter.maxSize(40))) {
+            assertUnresolvedAny(message, json, filter);
+        }
+        assertUnresolvedAny(any, root, Filter.anonymize("$.value"));
+        assertUnresolvedAny(any, root, Filter.prune("$.@type"));
+    }
+
+    private void assertUnresolvedAny(MessageOrBuilder message, String json, Filter filter) throws Exception {
+        ReferenceFilter reference = filter.toReferenceFilter();
+        assertThat(TestSupport.writeBytes(unresolvedAnyWriter(filter), message))
+                .isEqualTo(reference.process(json, ReferenceFilter.UTF8, Set.of()));
+        assertThat(TestSupport.writeChars(unresolvedAnyWriter(filter), message))
+                .isEqualTo(reference.process(json, ReferenceFilter.CHARS, Set.of()));
+    }
 
     // ---- targeted tests; write(..) also checks against the reference filter ----
 

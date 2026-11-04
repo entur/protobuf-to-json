@@ -3,6 +3,7 @@ package no.entur.protobuf.json.lite;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Duration;
@@ -20,6 +21,7 @@ import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
 import no.entur.protobuf.json.path.FilterType;
@@ -48,10 +50,16 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
     private final LiteMessagePlan.Plans plans = new LiteMessagePlan.Plans();
     private final Map<String, MessageLite> anyTypes;
     private final JsonFilter filter;
+    private final UnresolvedAny unresolvedAny;
 
     protected FilteringLiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, JsonFilter filter) {
+        this(anyTypes, filter, UnresolvedAny.FAIL);
+    }
+
+    protected FilteringLiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, JsonFilter filter, UnresolvedAny unresolvedAny) {
         this.anyTypes = anyTypes;
         this.filter = filter;
+        this.unresolvedAny = unresolvedAny;
     }
 
     public JsonFilter getFilter() {
@@ -428,7 +436,11 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
             values.endObject();
             return true;
         }
-        MessageLite content = LiteJsonValues.parse(LiteProtobufJsonWriter.findType(anyTypes, typeUrl), any.getValue());
+        MessageLite prototype = LiteProtobufJsonWriter.findType(anyTypes, typeUrl, unresolvedAny);
+        if (prototype == null) {
+            return writeUnresolved(typeUrl, any.getValue(), values, name, nameSize, anonymize);
+        }
+        MessageLite content = LiteJsonValues.parse(prototype, any.getValue());
         LiteMessagePlan plan = plans.get(content.getClass());
         if (plan.wellKnownType != null) {
             if (!values.startObject(name, nameSize)) {
@@ -448,5 +460,25 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
             return writing;
         }
         return writeMessage(content, plan, values, typeUrl, name, nameSize, anonymize);
+    }
+
+    private boolean writeUnresolved(String typeUrl, ByteString content, FilteredJsonValues values, Object name, int nameSize, boolean anonymize) throws IOException {
+        if (!values.startObject(name, nameSize)) {
+            return false;
+        }
+        boolean writing = writeTypeUrl(values, typeUrl, anonymize);
+        if (writing) {
+            FilterType type = anonymize ? FilterType.ANON : values.match(LiteProtobufJsonWriter.VALUE_NAME);
+            int valueNameSize = values.getNameSize(LiteProtobufJsonWriter.VALUE_NAME);
+            if (type == FilterType.PRUNE) {
+                writing = values.writePruned(LiteProtobufJsonWriter.VALUE_NAME, valueNameSize);
+            } else if (type == FilterType.ANON) {
+                writing = values.writeAnonymized(LiteProtobufJsonWriter.VALUE_NAME, valueNameSize);
+            } else {
+                writing = values.writeBase64(LiteProtobufJsonWriter.VALUE_NAME, valueNameSize, content);
+            }
+        }
+        values.endObject();
+        return writing;
     }
 }

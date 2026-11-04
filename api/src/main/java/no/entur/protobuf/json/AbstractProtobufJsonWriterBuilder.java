@@ -34,6 +34,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     protected String pruneRawJsonValue = JsonFilter.DEFAULT_PRUNE_RAW_JSON_VALUE;
     protected String truncateMessage = JsonFilter.DEFAULT_TRUNCATE_MESSAGE;
 
+    protected UnresolvedAny unresolvedAny = UnresolvedAny.FAIL;
+
     @SuppressWarnings("unchecked")
     protected B self() {
         return (B) this;
@@ -180,6 +182,23 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
 
     public B withTruncateMessage(String message) {
         this.truncateMessage = message;
+        return self();
+    }
+
+    /**
+     * What to do when a google.protobuf.Any type is not registered.
+     * {@link UnresolvedAny#FAIL}, the default, matches JsonFormat: the write fails.
+     * {@link UnresolvedAny#VALUE} writes <code>{"@type": url, "value": base64}</code> instead, without parsing the payload.
+     *
+     * @param unresolvedAny behaviour, not null
+     * @return this builder
+     */
+
+    public B withUnresolvedAny(UnresolvedAny unresolvedAny) {
+        if (unresolvedAny == null) {
+            throw new IllegalArgumentException("Expected an unresolved Any behaviour");
+        }
+        this.unresolvedAny = unresolvedAny;
         return self();
     }
 

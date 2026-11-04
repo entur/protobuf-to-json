@@ -12,4 +12,9 @@ public class TranscodingProtobufJsonWriterTest extends AbstractProtobufJsonWrite
     protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer() {
         return writer;
     }
+
+    @Override
+    protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writerWithUnresolvedAnyValue() {
+        return TranscodingProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY).withUnresolvedAny(UnresolvedAny.VALUE).build();
+    }
 }

@@ -17,4 +17,9 @@ public class FilteringTranscodingProtobufJsonWriterTest extends AbstractFilterin
     protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> filtered(Filter filter) {
         return filter.configure(TranscodingProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY)).build();
     }
+
+    @Override
+    protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> unresolvedAnyWriter(Filter filter) {
+        return filter.configure(TranscodingProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY).withUnresolvedAny(UnresolvedAny.VALUE)).build();
+    }
 }
