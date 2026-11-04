@@ -2,8 +2,6 @@
  * Path matching for anonymize and prune filters.
  */
 module no.entur.protobuf.json.path {
+    // no.entur.protobuf.json.path.any is the any-path lookup behind PathFilter, and not exported
     exports no.entur.protobuf.json.path;
-
-    // the any-path lookup is only used by the api module
-    exports no.entur.protobuf.json.path.any to no.entur.protobuf.json.api;
 }

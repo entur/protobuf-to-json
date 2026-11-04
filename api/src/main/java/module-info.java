@@ -6,10 +6,6 @@ module no.entur.protobuf.json.api {
 
     exports no.entur.protobuf.json;
 
-    // the writer modules; not application API
-    exports no.entur.protobuf.json.filter to
-            no.entur.protobuf.json.transcode,
-            no.entur.protobuf.json.stream,
-            no.entur.protobuf.json.accessor,
-            no.entur.protobuf.json.lite;
+    // the builders and the filtering writers take and return JsonFilter; the rest supports the writer modules
+    exports no.entur.protobuf.json.filter;
 }

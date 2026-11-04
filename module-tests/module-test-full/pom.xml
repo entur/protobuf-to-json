@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-module-tests</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-module-test-full</artifactId>
+    <name>protobuf-to-json-module-test-full</name>
+    <description>Writes full protobuf messages with the transcode, stream, accessor and JsonFormat writers, from a named module on the module path</description>
+
+    <properties>
+        <module.test.main>no.entur.protobuf.json.moduletest.full/no.entur.protobuf.json.moduletest.full.ModulePathCheck</module.test.main>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-accessor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-stream</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>no.entur.protobuf-to-json</groupId>
+            <artifactId>protobuf-to-json-utility</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-messages</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectories combine.self="override">
+                                <sourceDirectory>${project.basedir}/src/main/protobuf</sourceDirectory>
+                            </sourceDirectories>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

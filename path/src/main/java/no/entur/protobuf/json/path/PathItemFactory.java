@@ -11,12 +11,12 @@ import java.util.List;
 
 class PathItemFactory {
 
-    public PathItem create(ExpressionNode root) {
+    PathItem create(ExpressionNode root) {
         // index 1 ... n so that easier to use in filters
         return create(null, root, 1);
     }
 
-    protected PathItem create(PathItem parent, ExpressionNode node, int level) {
+    PathItem create(PathItem parent, ExpressionNode node, int level) {
         if (node.hasFilterType()) {
             return new EndPathItem(level, parent, node.getFilterType());
         }

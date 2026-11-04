@@ -10,17 +10,17 @@ class SinglePathItem extends PathItem {
 
     private PathItem next;
 
-    public SinglePathItem(int level, String fieldName, PathItem parent) {
+    SinglePathItem(int level, String fieldName, PathItem parent) {
         super(level, parent);
         this.fieldName = fieldName;
     }
 
-    public void setNext(PathItem next) {
+    void setNext(PathItem next) {
         this.next = next;
     }
 
     @Override
-    public PathItem matchPath(int level, String fieldName) {
+    PathItem matchPath(int level, String fieldName) {
         if (level == this.level && this.fieldName.equals(fieldName)) {
             return next;
         }

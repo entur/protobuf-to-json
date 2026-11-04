@@ -2,8 +2,7 @@ package no.entur.protobuf.json.filter;
 
 import no.entur.protobuf.json.path.FilterType;
 import no.entur.protobuf.json.path.PathFilter;
-import no.entur.protobuf.json.path.PathItem;
-import no.entur.protobuf.json.path.any.AnyPathFilters;
+import no.entur.protobuf.json.path.PathMatcher;
 
 /**
  * State of a single filtered write, shared by the full and lite writers. Not thread-safe.
@@ -29,9 +28,7 @@ public final class FilterContext {
     private final boolean escapeSurrogates;
 
     // paths
-    private final boolean absolutePaths;
-    private final AnyPathFilters anyPathFilters;
-    private PathItem pathItem;
+    private final PathMatcher pathMatcher; // null without paths
     private int level;
 
     // max size
@@ -48,14 +45,7 @@ public final class FilterContext {
         this.escapeSurrogates = utf8 && escapeSurrogates;
 
         PathFilter pathFilter = filter.getPathFilter();
-        if (pathFilter != null) {
-            this.absolutePaths = pathFilter.hasAbsolutePaths();
-            this.anyPathFilters = pathFilter.getAnyPathFilters();
-            this.pathItem = pathFilter.getPathItem();
-        } else {
-            this.absolutePaths = false;
-            this.anyPathFilters = null;
-        }
+        this.pathMatcher = pathFilter != null ? pathFilter.newMatcher() : null;
 
         this.sizing = filter.hasMaxSize();
         if (sizing) {
@@ -120,23 +110,11 @@ public final class FilterContext {
      */
 
     public FilterType matchName(String name) {
-        FilterType type = null;
-        if (absolutePaths) {
-            PathItem item = pathItem.constrain(level).matchPath(level, name);
-            if (item.hasType()) {
-                type = item.getType();
-                item = item.constrain(level);
-            }
-            pathItem = item;
-        }
-        if (anyPathFilters != null) {
-            type = FilterType.strongest(type, anyPathFilters.matchPath(name));
-        }
-        return type;
+        return pathMatcher != null ? pathMatcher.matchName(level, name) : null;
     }
 
     public boolean hasPaths() {
-        return absolutePaths || anyPathFilters != null;
+        return pathMatcher != null;
     }
 
     /**

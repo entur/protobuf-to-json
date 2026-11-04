@@ -53,6 +53,7 @@
         <module>utility</module>
         <module>test-support</module>
         <module>benchmarks</module>
+        <module>module-tests</module>
     </modules>
 
     <properties>
@@ -253,6 +254,15 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>${maven-compiler-plugin.version}</version>
                     <executions>
+                        <execution>
+                            <id>default-compile</id>
+                            <configuration>
+                                <!-- warns if the public API of an exported package uses types which are not exported -->
+                                <compilerArgs>
+                                    <arg>-Xlint:exports</arg>
+                                </compilerArgs>
+                            </configuration>
+                        </execution>
                         <execution>
                             <id>default-testCompile</id>
                             <configuration>

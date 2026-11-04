@@ -7,18 +7,9 @@ import no.entur.protobuf.json.path.any.AnyPathFilter;
 import no.entur.protobuf.json.path.any.AnyPathFilters;
 
 /**
- * Compiled anonymize and prune expressions: a {@linkplain PathItem} state machine for absolute paths, and a lookup for any-paths.
- * Immutable, so it can be shared between threads.
- * <br><br>
- * Matching a field name, given the current item and level (the number of open objects):
- * <pre>
- * item = item.constrain(level).matchPath(level, name);
- * if (item.hasType()) {
- *     type = item.getType();
- *     item = item.constrain(level);
- * }
- * type = FilterType.strongest(type, anyPathFilters.matchPath(name)); // if any-paths are present
- * </pre>
+ * Compiled anonymize and prune expressions: a state machine for absolute paths, and a lookup for any-paths.
+ * Immutable, so it can be shared between threads; match the field names of a document with a {@linkplain PathMatcher}
+ * from {@linkplain #newMatcher()}.
  */
 
 public final class PathFilter {
@@ -80,28 +71,30 @@ public final class PathFilter {
     }
 
     /**
-     * Root of the state machine for absolute paths. Never null; without absolute paths it never matches.
+     * Create a matcher, for matching the field names of one document.
      *
-     * @return root item, for level 1
+     * @return new matcher
      */
 
-    public PathItem getPathItem() {
-        return pathItem;
+    public PathMatcher newMatcher() {
+        return new PathMatcher(absolutePaths ? pathItem : null, anyPathFilters);
     }
 
     /**
-     * Any-path filters.
+     * Whether there are absolute paths, i.e. {@code $.a.b} or {@code $.a.*.b}.
      *
-     * @return any-path filters, or null if there are none
+     * @return true if there are absolute paths
      */
-
-    public AnyPathFilters getAnyPathFilters() {
-        return anyPathFilters;
-    }
 
     public boolean hasAbsolutePaths() {
         return absolutePaths;
     }
+
+    /**
+     * Whether there are any-paths, i.e. {@code $..b}.
+     *
+     * @return true if there are any-paths
+     */
 
     public boolean hasAnyPaths() {
         return anyPathFilters != null;

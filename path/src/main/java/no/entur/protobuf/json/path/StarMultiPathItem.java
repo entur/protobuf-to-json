@@ -15,27 +15,27 @@ class StarMultiPathItem extends PathItem {
     private final PathItem[] next;
     private PathItem any;
 
-    public StarMultiPathItem(List<String> fieldNames, int level, PathItem parent) {
+    StarMultiPathItem(List<String> fieldNames, int level, PathItem parent) {
         this(fieldNames.toArray(new String[0]), level, parent);
     }
 
-    public StarMultiPathItem(String[] fieldNames, int level, PathItem parent) {
+    StarMultiPathItem(String[] fieldNames, int level, PathItem parent) {
         super(level, parent);
 
         this.fieldNames = fieldNames;
         this.next = new PathItem[fieldNames.length];
     }
 
-    public void setNext(PathItem next, int i) {
+    void setNext(PathItem next, int i) {
         this.next[i] = next;
     }
 
-    public void setAny(PathItem any) {
+    void setAny(PathItem any) {
         this.any = any;
     }
 
     @Override
-    public PathItem matchPath(int level, String fieldName) {
+    PathItem matchPath(int level, String fieldName) {
         if (level != this.level) {
             return this;
         }

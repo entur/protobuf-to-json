@@ -35,7 +35,7 @@ public class AbstractProtobufJsonWriterBuilderTest {
         assertThat(filter.getMaxSize()).isEqualTo(100);
         assertThat(filter.hasMaxSize()).isTrue();
         assertThat(filter.hasPaths()).isTrue();
-        assertThat(filter.getPathFilter().getAnyPathFilters().matchPath("password")).isEqualTo(FilterType.ANON);
+        assertThat(filter.getPathFilter().newMatcher().matchName(3, "password")).isEqualTo(FilterType.ANON);
         assertThat(filter.getAnonymizeRawJsonValue()).isEqualTo("\"*\"");
         assertThat(filter.getPruneRawJsonValue()).isEqualTo("\"[removed]\"");
         assertThat(filter.getTruncateMessage()).isEqualTo("... + ");

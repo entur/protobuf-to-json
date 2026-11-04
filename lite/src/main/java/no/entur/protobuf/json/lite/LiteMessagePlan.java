@@ -86,7 +86,9 @@ final class LiteMessagePlan {
             try {
                 number = field.getInt(null);
             } catch (IllegalAccessException e) {
-                continue;
+                // i.e. on the module path, if the package is not exported; skipping the field would write {} silently
+                throw new IllegalStateException("Unable to read " + type.getName() + "." + field.getName() + "; on the module path, "
+                        + "the module of " + type.getName() + " must export its package (at least to no.entur.protobuf.json.lite)", e);
             }
             String base = field.getName().substring(0, field.getName().length() - FIELD_NUMBER_SUFFIX.length());
             LiteFieldInfo info = createField(base, number, accessors, plans);

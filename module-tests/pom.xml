@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>no.entur.protobuf-to-json</groupId>
+        <artifactId>protobuf-to-json-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>protobuf-to-json-module-tests</artifactId>
+    <packaging>pom</packaging>
+    <name>protobuf-to-json-module-tests</name>
+    <description>Named application modules which write messages with the writers on the module path, run in the integration-test phase</description>
+
+    <modules>
+        <module>module-test-full</module>
+        <module>module-test-lite</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.testRelease>25</maven.compiler.testRelease>
+        <!-- not published -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <maven.source.skip>true</maven.source.skip>
+        <!-- set by each module: the application module and its main class, as module/class -->
+        <module.test.main/>
+        <skipTests>false</skipTests>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <!-- runs the application module on the module path, with the jars of the writer modules (or their
+                         target/classes, when they are not packaged) and of their dependencies -->
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>module-path</id>
+                            <phase>integration-test</phase>
+                            <goals>
+                                <goal>exec</goal>
+                            </goals>
+                            <configuration>
+                                <skip>${skipTests}</skip>
+                                <executable>${java.home}/bin/java</executable>
+                                <arguments>
+                                    <argument>--module-path</argument>
+                                    <modulepath/>
+                                    <argument>--module</argument>
+                                    <argument>${module.test.main}</argument>
+                                </arguments>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <!-- the generated messages are public API of the application modules; no export checks for them -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <configuration>
+                            <compilerArgs combine.self="override"/>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
