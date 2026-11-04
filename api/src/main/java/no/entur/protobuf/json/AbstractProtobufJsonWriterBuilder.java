@@ -11,7 +11,7 @@ import no.entur.protobuf.json.filter.JsonStrings;
 /**
  * Builder with the filter options, as in json-log-filter:
  * <ul>
- *     <li>anonymize paths: keep the structure, but replace every scalar value with {@code "*"}</li>
+ *     <li>anonymize paths: keep the structure, but replace every scalar value with {@code "*"}. Field names and map keys are written as-is</li>
  *     <li>prune paths: replace the whole value with {@code "[removed]"}</li>
  *     <li>max string length: truncate long string values to {@code "<start>... + <number of removed characters>"}</li>
  *     <li>max size: stop writing at the first value which does not fit, and close the open objects and arrays</li>
@@ -40,8 +40,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Truncate string values longer than this. Field names, and strings which are not text (64-bit integers, enum names,
-     * timestamps, durations, and NaN and infinity), are never truncated.
+     * Truncate string values longer than this. Field names and map keys, and strings which are not text (64-bit integers,
+     * enum names, timestamps, durations, and NaN and infinity), are never truncated.
      *
      * @param maxStringLength max length in UTF-16 characters, or -1 for no limit
      * @return this builder
@@ -90,7 +90,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Anonymize fields with these names, at any depth.
+     * Anonymize fields with these names, at any depth, including a map entry whose key is one of these names.
+     * The name itself is still written.
      *
      * @param keys field names
      * @return this builder
@@ -108,7 +109,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Prune fields with these names, at any depth.
+     * Prune fields with these names, at any depth, including a map entry whose key is one of these names.
+     * The name itself is still written.
      *
      * @param keys field names
      * @return this builder

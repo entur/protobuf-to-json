@@ -169,6 +169,12 @@ Build a writer with the filters you want:
  * prune takes precedence over anonymize, and no paths are matched within an anonymized value
  * field names containing a dot cannot be matched
 
+Anonymize and prune replace values, not names. Field names are always written as-is. Map keys are JSON names, so they
+are written in full too: anonymizing or pruning a map keeps every key and replaces the values
+(`{"user@example.com":"*"}`). A path matches a map key as a field name (`$.labels.email` matches the entry whose key is
+`email`) and filters that entry's value, not the key. `withAnonymizeKeys` and `withPruneKeys` match those names at any
+depth, including map keys. Max string length does not apply to field names or map keys.
+
 ### Max string length
 Max string length applies to text and bytes: string fields, base64-encoded bytes, and other text like `google.protobuf.Struct`
 strings, field masks and the `@type` of `google.protobuf.Any`. 
