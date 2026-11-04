@@ -69,5 +69,8 @@ public class AbstractProtobufJsonWriterBuilderTest {
         assertThrows(IllegalArgumentException.class, () -> new Builder().withMaxSize(-2));
         assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizePaths("a.b").build());
         assertThrows(IllegalArgumentException.class, () -> new Builder().withPrunePaths("$.a[0]").build());
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizeRawJsonValue("not-json"));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withPruneRawJsonValue("\"a\" \"b\""));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizeRawJsonValue(null));
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonStrings;
+import no.entur.protobuf.json.filter.RawJson;
 
 /**
  * Builder with the filter options, as in json-log-filter:
@@ -148,25 +149,29 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Replacement for anonymized values, written as is.
+     * Replacement for anonymized values, written as is. Must be exactly one JSON value, so the surrounding JSON stays valid.
      *
      * @param raw JSON value, i.e. {@code "\"*\""} or {@code "null"}
      * @return this builder
+     * @throws IllegalArgumentException if {@code raw} is not one JSON value
      */
 
     public B withAnonymizeRawJsonValue(String raw) {
+        RawJson.requireValue(raw);
         this.anonymizeRawJsonValue = raw;
         return self();
     }
 
     /**
-     * Replacement for pruned values, written as is.
+     * Replacement for pruned values, written as is. Must be exactly one JSON value, so the surrounding JSON stays valid.
      *
      * @param raw JSON value, i.e. {@code "\"[removed]\""} or {@code "null"}
      * @return this builder
+     * @throws IllegalArgumentException if {@code raw} is not one JSON value
      */
 
     public B withPruneRawJsonValue(String raw) {
+        RawJson.requireValue(raw);
         this.pruneRawJsonValue = raw;
         return self();
     }

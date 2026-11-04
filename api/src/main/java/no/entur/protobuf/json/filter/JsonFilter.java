@@ -47,9 +47,10 @@ public final class JsonFilter {
      * @param maxSize               max size, or -1 for no limit
      * @param anonymizes            anonymize path expressions
      * @param prunes                prune path expressions
-     * @param anonymizeRawJsonValue raw JSON value for anonymized values
-     * @param pruneRawJsonValue     raw JSON value for pruned values
+     * @param anonymizeRawJsonValue raw JSON value for anonymized values; exactly one JSON value
+     * @param pruneRawJsonValue     raw JSON value for pruned values; exactly one JSON value
      * @param truncateMessage       truncate message (not escaped)
+     * @throws IllegalArgumentException if a limit is out of range, or a raw replacement is not one JSON value
      */
 
     public JsonFilter(int maxStringLength, int maxSize, List<String> anonymizes, List<String> prunes, String anonymizeRawJsonValue, String pruneRawJsonValue, String truncateMessage) {
@@ -59,6 +60,8 @@ public final class JsonFilter {
         if (maxSize < -1) {
             throw new IllegalArgumentException("Expected -1 or a non-negative max size, got " + maxSize);
         }
+        RawJson.requireValue(anonymizeRawJsonValue);
+        RawJson.requireValue(pruneRawJsonValue);
         this.maxStringLength = maxStringLength == -1 ? MAX_STRING_LENGTH : maxStringLength;
         this.maxSizeLimit = maxSize != -1;
         this.maxSize = maxSize == -1 ? Long.MAX_VALUE : maxSize;
