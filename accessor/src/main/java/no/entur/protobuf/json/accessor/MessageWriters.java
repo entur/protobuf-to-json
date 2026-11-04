@@ -1,5 +1,6 @@
 package no.entur.protobuf.json.accessor;
 
+import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.Message;
 import no.entur.protobuf.json.plan.FilteredJsonValues;
 import no.entur.protobuf.json.plan.MessagePlan;
@@ -19,18 +20,25 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * The generated writers, one unfiltered and one filtering writer per message class, generated when first used (or when
  * registered) and shared by all writer instances.
  * <br><br>
  * Messages which are not generated (i.e. {@linkplain com.google.protobuf.DynamicMessage}), the well-known types (as root
- * values), and message classes a writer cannot be generated for, are transcoded instead.
+ * values), and message classes a writer cannot be generated for, are transcoded instead. A generation failure is logged
+ * once per message class; DynamicMessage and the well-known types are expected fallbacks and are not logged.
  * <br><br>
  * Internal; public only because the generated writers may be defined in the packages of the messages.
  */
 
 public final class MessageWriters {
+
+    private static final Logger LOGGER = Logger.getLogger(MessageWriters.class.getName());
+    private static final Set<Class<?>> LOGGED_FALLBACKS = ConcurrentHashMap.newKeySet();
 
     /**
      * A writer: the generated class (or the transcoder), its static write method, and the message classes of its fields.
@@ -117,7 +125,24 @@ public final class MessageWriters {
             }
             return MessageWriterGenerator.generate(accessors, filtering);
         } catch (Exception | LinkageError e) {
+            logFallback(type, e);
             return transcoding(filtering, e);
+        }
+    }
+
+    /**
+     * Log a generation failure once per message class. Expected fallbacks are not logged.
+     *
+     * @param type    message class
+     * @param failure why no writer could be generated, or null
+     */
+
+    static void logFallback(Class<?> type, Throwable failure) {
+        if (failure == null || DynamicMessage.class.isAssignableFrom(type)) {
+            return;
+        }
+        if (LOGGED_FALLBACKS.add(type)) {
+            LOGGER.log(Level.WARNING, "Unable to generate a JSON writer for " + type.getName() + "; transcoding instead", failure);
         }
     }
 
