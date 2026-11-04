@@ -819,11 +819,42 @@ final class FilteringCodedOutputStreamJsonSink implements CodedOutputStreamSink 
         }
     }
 
-    // ---- not used by generated code for regular fields ----
+    // ---- raw bytes ----
+    // Not used by protobuf for fields: generated code and the reflection-based serialization (MessageReflection, FieldSet,
+    // UnknownFieldSet) write no field data through these methods, only user code does (i.e. via writeRawBytes or
+    // UnsafeByteOperations.unsafeWriteTo). Fail rather than drop the data silently. CodedOutputStreamConventions checks how
+    // protobuf writes fields when a writer is created.
 
     @Override
     public void writeRawBytes(ByteBuffer value) {
+        throw unhandled("writeRawBytes(ByteBuffer)");
     }
+
+    @Override
+    public void write(byte[] value, int offset, int length) {
+        throw unhandled("write(byte[], int, int)");
+    }
+
+    @Override
+    public void writeLazy(byte[] value, int offset, int length) {
+        throw unhandled("writeLazy(byte[], int, int)");
+    }
+
+    @Override
+    public void write(ByteBuffer value) {
+        throw unhandled("write(ByteBuffer)");
+    }
+
+    @Override
+    public void writeLazy(ByteBuffer value) {
+        throw unhandled("writeLazy(ByteBuffer)");
+    }
+
+    private static IllegalStateException unhandled(String method) {
+        return new IllegalStateException("Raw bytes written by CodedOutputStream." + method + " cannot be written as JSON");
+    }
+
+    // ---- MessageSet extensions and unknown fields of MessageSets, which are skipped like other extensions and unknown fields ----
 
     @Override
     public void writeMessageSetExtension(int fieldNumber, MessageLite value) {
@@ -833,21 +864,7 @@ final class FilteringCodedOutputStreamJsonSink implements CodedOutputStreamSink 
     public void writeRawMessageSetExtension(int fieldNumber, ByteString value) {
     }
 
-    @Override
-    public void write(byte[] value, int offset, int length) {
-    }
-
-    @Override
-    public void writeLazy(byte[] value, int offset, int length) {
-    }
-
-    @Override
-    public void write(ByteBuffer value) {
-    }
-
-    @Override
-    public void writeLazy(ByteBuffer value) {
-    }
+    // ---- other ----
 
     @Override
     public void flush() {

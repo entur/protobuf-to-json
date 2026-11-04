@@ -30,9 +30,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * and {@linkplain MethodHandles.Lookup.ClassOption#NESTMATE}), which allows it to invoke the private constructor.
  * <br><br>
  * If the subclass cannot be generated, i.e. for an incompatible protobuf version, or if protobuf is loaded by a class loader
- * which cannot see this library, the writers fail when created. They also fail when created if generated code writes packed
- * fields, maps, strings or bytes by a calling convention {@linkplain CodedOutputStreamJsonSink} does not handle, rather than
- * dropping those fields.
+ * which cannot see this library, the writers fail when created. They also fail when created if the sinks do not handle how
+ * this protobuf version writes messages (see {@linkplain CodedOutputStreamConventions}), rather than drop or garble fields.
  */
 
 final class JsonCodedOutputStreamFactory {
@@ -49,7 +48,6 @@ final class JsonCodedOutputStreamFactory {
             // smoke test: resolves the sink interface from protobuf's class loader
             CodedOutputStream output = (CodedOutputStream) constructor.invokeExact((CodedOutputStreamSink) new NoopSink());
             output.writeInt32(1, 1);
-            CodedOutputStreamConventions.verify(constructor);
         } catch (Throwable e) {
             constructor = null;
             failure = e;
@@ -62,19 +60,26 @@ final class JsonCodedOutputStreamFactory {
     }
 
     /**
-     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created.
+     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created, and that the sinks handle how this protobuf
+     * version writes messages to them. Called when a writer is created.
      *
      * @throws IllegalStateException if not
      */
 
     static void verify() {
+        verifyConstructor();
+        CodedOutputStreamConventions.verify();
+    }
+
+    private static void verifyConstructor() {
         if (CONSTRUCTOR == null) {
             throw new IllegalStateException("Unable to generate a JSON-writing CodedOutputStream for this protobuf version and class loader", FAILURE);
         }
     }
 
     static CodedOutputStream create(CodedOutputStreamSink sink) {
-        verify();
+        // not verify(): the convention check creates sinks
+        verifyConstructor();
         try {
             return (CodedOutputStream) CONSTRUCTOR.invokeExact(sink);
         } catch (RuntimeException | Error e) {

@@ -1,185 +1,192 @@
 package no.entur.protobuf.json.stream;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.BytesValue;
-import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.DescriptorProtos.SourceCodeInfo.Location;
-import com.google.protobuf.MessageLite;
+import com.google.protobuf.DescriptorProtos.UninterpretedOption;
+import com.google.protobuf.DynamicMessage;
+import com.google.protobuf.ListValue;
+import com.google.protobuf.Message;
+import com.google.protobuf.NullValue;
 import com.google.protobuf.Struct;
+import com.google.protobuf.UnknownFieldSet;
 import com.google.protobuf.Value;
-import com.google.protobuf.WireFormat;
+import com.google.protobuf.util.JsonFormat;
+import no.entur.protobuf.json.filter.JsonFilter;
+import no.entur.protobuf.json.plan.FilteredJsonValues;
+import no.entur.protobuf.json.plan.MessagePlan;
+import no.entur.protobuf.json.plan.MessagePlan.Plans;
+import no.entur.protobuf.json.plan.ProtobufJsonWriterSupport;
+import no.entur.protobuf.json.transcode.FilteringTranscodingProtobufJsonWriter;
+import no.entur.protobuf.json.transcode.TranscodingProtobufJsonWriter;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.ObjectWriteContext;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.reflect.Proxy;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * Fails if generated {@linkplain CodedOutputStream} calls are not a convention {@linkplain CodedOutputStreamJsonSink}
- * handles. A protobuf upgrade which starts writing field data through the sink's no-op methods, or which stops writing
- * packed fields and maps as a length-delimited tag, a length and then the values, would otherwise drop fields silently.
+ * Checks that the sinks handle how the protobuf version at runtime writes messages to a {@linkplain com.google.protobuf.CodedOutputStream}.
+ * A protobuf upgrade which writes packed fields, maps, strings, bytes or nested messages through other methods, or in
+ * another order, would otherwise make the stream writers drop or garble fields silently.
+ * <br><br>
+ * Probe messages bundled with protobuf-java are written by both sinks, and must give the same JSON as the transcoding
+ * writers, which read the binary format. The probes are written by their generated code, which calls the runtime's
+ * helpers (i.e. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
+ * messages optimized for code size. Together they have packed and repeated fields, maps written by the runtime, strings,
+ * bytes, 64-bit integers, doubles, bools, nested and well-known messages, and unknown fields (including a group).
+ * A probe the transcoding writers cannot write with the protobuf version at runtime is skipped: the map probe
+ * (google.protobuf.Struct, whose values have an enum field) with protobuf-java before 4.36.
+ * <br><br>
+ * The check runs once, the first time a stream writer is created.
  */
 
 final class CodedOutputStreamConventions {
+
+    private static final JsonFormat.TypeRegistry TYPE_REGISTRY = JsonFormat.TypeRegistry.getEmptyTypeRegistry();
+
+    // matches no field of the probes, so that values are matched against a path but not filtered
+    private static final JsonFilter FILTER = new JsonFilter(-1, -1, Collections.singletonList("$..none"), null,
+            JsonFilter.DEFAULT_ANONYMIZE_RAW_JSON_VALUE, JsonFilter.DEFAULT_PRUNE_RAW_JSON_VALUE, JsonFilter.DEFAULT_TRUNCATE_MESSAGE);
+
+    private static final Throwable FAILURE = check();
 
     private CodedOutputStreamConventions() {
     }
 
     /**
-     * Write messages from protobuf-java, whose generated code uses the packed, map, string and bytes conventions, and
-     * check the calls.
+     * Check that the sinks write the probe messages correctly.
      *
-     * @param constructor constructor of a JSON-writing {@linkplain CodedOutputStream}, as returned by
-     *                    {@linkplain JsonCodedOutputStreamFactory#defineConstructor()}
-     * @throws IllegalStateException if a call sequence is not one the sink handles
+     * @throws IllegalStateException if not
      */
 
-    static void verify(MethodHandle constructor) throws Throwable {
-        verifyPacked(record(constructor, Location.newBuilder().addPath(1).addPath(128).addSpan(3).setLeadingComments("x").build()));
-        verifyMap(record(constructor, Struct.newBuilder().putFields("k", Value.newBuilder().setNumberValue(1).build()).build()));
-        verifyBytes(record(constructor, BytesValue.newBuilder().setValue(ByteString.copyFromUtf8("ab")).build()));
-    }
-
-    static void verifyPacked(List<Call> calls) {
-        rejectDropped(calls, "packed field");
-        int tag = indexOfLengthDelimitedTag(calls, 1, 0);
-        if (tag < 0 || !isUInt32NoTag(calls, tag + 1) || !seenInt32NoTag(calls, tag + 2, 1) || !seenInt32NoTag(calls, tag + 2, 128)) {
-            throw fail("packed field", calls);
-        }
-        if (!seenString(calls, "x")) {
-            throw fail("string field", calls);
+    static void verify() {
+        if (FAILURE != null) {
+            throw new IllegalStateException("The stream writers do not handle how this protobuf version writes messages to a CodedOutputStream", FAILURE);
         }
     }
 
-    static void verifyMap(List<Call> calls) {
-        rejectDropped(calls, "map field");
-        int tag = indexOfLengthDelimitedTag(calls, 1, 0);
-        if (tag < 0 || !isUInt32NoTag(calls, tag + 1) || !seenString(calls, "k") || (!seen(calls, "writeMessage") && !seen(calls, "writeMessageNoTag"))) {
-            throw fail("map field", calls);
-        }
-    }
-
-    static void verifyBytes(List<Call> calls) {
-        rejectDropped(calls, "bytes field");
-        if (!seen(calls, "writeBytes") && !seen(calls, "writeBytesNoTag") && !seen(calls, "writeByteArray") && !seen(calls, "writeByteArrayNoTag")) {
-            throw fail("bytes field", calls);
-        }
-    }
-
-    private static List<Call> record(MethodHandle constructor, MessageLite message) throws Throwable {
-        List<Call> calls = new ArrayList<>();
-        CodedOutputStreamSink sink = (CodedOutputStreamSink) Proxy.newProxyInstance(CodedOutputStreamSink.class.getClassLoader(), new Class<?>[] {CodedOutputStreamSink.class},
-                (proxy, method, args) -> {
-                    if (!method.getDeclaringClass().equals(Object.class)) {
-                        calls.add(new Call(method.getName(), args == null ? new Object[0] : args));
-                    }
-                    if (method.getReturnType() == int.class) {
-                        return method.getName().equals("spaceLeft") ? Integer.MAX_VALUE : 0;
-                    }
-                    return null;
-                });
-        CodedOutputStream output = (CodedOutputStream) constructor.invokeExact(sink);
-        message.writeTo(output);
-        return calls;
-    }
-
-    private static void rejectDropped(List<Call> calls, String what) {
-        for (Call call : calls) {
-            if (isDropped(call)) {
-                throw fail(what + " written by " + call + ", which the sink ignores", calls);
+    private static Throwable check() {
+        try {
+            for (Message probe : probes()) {
+                verify(probe, probe);
+                verify(probe, DynamicMessage.parseFrom(probe.getDescriptorForType(), probe.toByteString()));
             }
+            return null;
+        } catch (RuntimeException | IOException | LinkageError e) {
+            return e;
         }
     }
 
-    private static boolean isDropped(Call call) {
-        if (call.name.equals("writeLazy") || call.name.equals("writeRawBytes")) {
-            return true;
-        }
-        if (!call.name.equals("write")) {
+    /**
+     * @return messages bundled with protobuf-java, generated by its own protoc version
+     */
+
+    static List<Message> probes() {
+        UnknownFieldSet unknownFields = UnknownFieldSet.newBuilder()
+                .addField(100, UnknownFieldSet.Field.newBuilder().addVarint(1).build())
+                .addField(101, UnknownFieldSet.Field.newBuilder().addLengthDelimited(ByteString.copyFromUtf8("unknown")).build())
+                .addField(102, UnknownFieldSet.Field.newBuilder().addFixed32(2).build())
+                .addField(103, UnknownFieldSet.Field.newBuilder().addFixed64(3).build())
+                .addField(104, UnknownFieldSet.Field.newBuilder()
+                        .addGroup(UnknownFieldSet.newBuilder().addField(1, UnknownFieldSet.Field.newBuilder().addVarint(4).build()).build())
+                        .build())
+                .build();
+
+        // packed int32 (written as a tag, a length and untagged values), strings and repeated strings
+        Location location = Location.newBuilder()
+                .addPath(1).addPath(128)
+                .addSpan(3).addSpan(300000)
+                .setLeadingComments("x")
+                .addLeadingDetachedComments("y").addLeadingDetachedComments("z")
+                .setUnknownFields(unknownFields)
+                .build();
+
+        // repeated nested messages, bools, 64-bit integers, double and bytes
+        UninterpretedOption option = UninterpretedOption.newBuilder()
+                .addName(UninterpretedOption.NamePart.newBuilder().setNamePart("a").setIsExtension(true))
+                .addName(UninterpretedOption.NamePart.newBuilder().setNamePart("b").setIsExtension(false))
+                .setIdentifierValue("i")
+                .setPositiveIntValue(Long.MIN_VALUE)
+                .setNegativeIntValue(-1)
+                .setDoubleValue(1.5)
+                .setStringValue(ByteString.copyFrom(new byte[] {0, 1, 2, (byte) 0xFF}))
+                .setAggregateValue("aggregate")
+                .build();
+
+        // a map written by the runtime, with well-known message values; written as a regular message
+        Struct struct = Struct.newBuilder()
+                .putFields("number", Value.newBuilder().setNumberValue(1).build())
+                .putFields("list", Value.newBuilder().setListValue(ListValue.newBuilder().addValues(Value.newBuilder().setBoolValue(true))).build())
+                .putFields("struct", Value.newBuilder().setStructValue(Struct.newBuilder().putFields("null", Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build())).build())
+                .build();
+
+        return Arrays.asList(location, option, struct);
+    }
+
+    /**
+     * Write a message with both sinks, and compare with what the transcoding writers write for a probe.
+     *
+     * @param probe   the probe, of which the binary form is transcoded
+     * @param message the message the sinks write: the probe, or a message which writes the same fields
+     * @return false if the transcoding writers cannot write the probe with this protobuf version, so that there is
+     * nothing to compare with (the writers fail for such messages anyway, when writing them)
+     * @throws IllegalStateException if a sink fails or writes different JSON
+     * @throws IOException           if transcoding fails
+     */
+
+    static boolean verify(Message probe, Message message) throws IOException {
+        Plans plans = new Plans();
+        MessagePlan plan = plans.get(probe.getDescriptorForType());
+        byte[] bytes = probe.toByteArray();
+
+        // the transcoders write the probes as regular messages, like the sinks do
+        TranscodingProtobufJsonWriter transcoder = new TranscodingProtobufJsonWriter(plans, TYPE_REGISTRY);
+        FilteringTranscodingProtobufJsonWriter filteringTranscoder = new FilteringTranscodingProtobufJsonWriter(plans, TYPE_REGISTRY, FILTER);
+        String expected;
+        String expectedFiltered;
+        try {
+            expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, generator, null));
+            expectedFiltered = write(generator -> filteringTranscoder.writeMessage(bytes, 0, bytes.length, plan, new FilteredJsonValues(FILTER, generator), null, null, 0, false));
+        } catch (LinkageError e) {
+            // i.e. enum values (google.protobuf.Value has one) need JsonEnumvalueOptionsProto of protobuf-java-util 4.36,
+            // which is missing from older versions, and whose generated code fails with older protobuf-java versions
             return false;
         }
-        // write(byte) is writeBoolNoTag; write(byte[]) and write(ByteBuffer) are ignored
-        return call.args.length != 1 || call.args[0] instanceof ByteBuffer;
+
+        compare(message, CodedOutputStreamJsonSink.class, expected,
+                generator -> new CodedOutputStreamJsonSink(plans, transcoder, generator).write(message));
+        compare(message, FilteringCodedOutputStreamJsonSink.class, expectedFiltered,
+                generator -> new FilteringCodedOutputStreamJsonSink(plans, filteringTranscoder, new FilteredJsonValues(FILTER, generator)).write(message));
+        return true;
     }
 
-    private static int indexOfLengthDelimitedTag(List<Call> calls, int fieldNumber, int from) {
-        int encoded = (fieldNumber << 3) | WireFormat.WIRETYPE_LENGTH_DELIMITED;
-        for (int i = from; i < calls.size(); i++) {
-            Call call = calls.get(i);
-            if (call.name.equals("writeUInt32NoTag") && call.argInt(0) == encoded) {
-                return i;
-            }
-            if (call.name.equals("writeTag") && call.argInt(0) == fieldNumber && call.argInt(1) == WireFormat.WIRETYPE_LENGTH_DELIMITED) {
-                return i;
-            }
+    private static void compare(Message message, Class<?> sink, String expected, Write write) throws IOException {
+        String actual;
+        try {
+            actual = write(write);
+        } catch (RuntimeException e) {
+            // i.e. a method the sink does not handle, or an invalid JSON structure
+            throw new IllegalStateException(sink.getSimpleName() + " failed to write " + message.getDescriptorForType().getFullName(), e);
         }
-        return -1;
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException(sink.getSimpleName() + " wrote " + message.getDescriptorForType().getFullName() + " as " + actual + ", expected " + expected);
+        }
     }
 
-    private static boolean isUInt32NoTag(List<Call> calls, int index) {
-        return index < calls.size() && calls.get(index).name.equals("writeUInt32NoTag");
+    private interface Write {
+        void write(JsonGenerator generator) throws IOException;
     }
 
-    private static boolean seenInt32NoTag(List<Call> calls, int from, int value) {
-        for (int i = from; i < calls.size(); i++) {
-            Call call = calls.get(i);
-            if (call.name.equals("writeInt32NoTag") && call.argInt(0) == value) {
-                return true;
-            }
+    private static String write(Write write) throws IOException {
+        // as ProtobufJsonWriterSupport.writeAsString
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (JsonGenerator generator = ProtobufJsonWriterSupport.JSON_FACTORY.createGenerator(ObjectWriteContext.empty(), output)) {
+            write.write(generator);
         }
-        return false;
-    }
-
-    private static boolean seenString(List<Call> calls, String value) {
-        for (Call call : calls) {
-            if ((call.name.equals("writeString") || call.name.equals("writeStringNoTag")) && value.equals(call.args[call.args.length - 1])) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean seen(List<Call> calls, String name) {
-        for (Call call : calls) {
-            if (call.name.equals(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static IllegalStateException fail(String what, List<Call> calls) {
-        return new IllegalStateException("CodedOutputStream calling convention is not one this writer handles (" + what + "): " + calls);
-    }
-
-    static final class Call {
-        final String name;
-        final Object[] args;
-
-        Call(String name, Object... args) {
-            this.name = name;
-            this.args = args;
-        }
-
-        int argInt(int index) {
-            return ((Number) args[index]).intValue();
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder(name);
-            for (Object arg : args) {
-                builder.append(' ');
-                if (arg instanceof byte[] bytes) {
-                    builder.append("byte[").append(bytes.length).append(']');
-                } else if (arg instanceof MessageLite || arg instanceof ByteString || arg instanceof ByteBuffer) {
-                    builder.append(arg.getClass().getSimpleName());
-                } else {
-                    builder.append(arg);
-                }
-            }
-            return builder.toString();
-        }
+        return output.toString(StandardCharsets.UTF_8);
     }
 }
