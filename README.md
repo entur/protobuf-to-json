@@ -258,6 +258,8 @@ Group id is `no.entur.protobuf-to-json`.
 
 ## Third-party code:
 
+License texts are in [NOTICE](NOTICE), also packaged as `META-INF/NOTICE`.
+
  * the path matching (`path` module), and the size and truncation logic (`api` module), are ported from
    [json-log-filter](https://github.com/skjolber/json-log-filter) (Apache-2.0)
  * the protobuf conformance test messages (`support/protobuf/conformance`) are from
