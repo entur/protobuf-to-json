@@ -21,8 +21,8 @@ import java.io.IOException;
  * <br><br>
  * CodedOutputStream only has a private constructor, so a subclass is generated at runtime with the ClassFile API (Java 24+).
  * This depends on how protobuf's generated code and CodedOutputStream work internally; creating the writer fails if the
- * subclass cannot be generated. {@linkplain com.google.protobuf.DynamicMessage}s are written the same way, via their
- * reflection-based serialization.
+ * subclass cannot be generated, or if generated code uses a calling convention the sink does not handle.
+ * {@linkplain com.google.protobuf.DynamicMessage}s are written the same way, via their reflection-based serialization.
  * <br><br>
  * The output is the same as for {@linkplain TranscodingProtobufJsonWriter}, which also writes the well-known types and the
  * contents of google.protobuf.Any values; see it for differences from JsonFormat.

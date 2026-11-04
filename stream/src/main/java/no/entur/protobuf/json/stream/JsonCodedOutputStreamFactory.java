@@ -30,7 +30,9 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * and {@linkplain MethodHandles.Lookup.ClassOption#NESTMATE}), which allows it to invoke the private constructor.
  * <br><br>
  * If the subclass cannot be generated, i.e. for an incompatible protobuf version, or if protobuf is loaded by a class loader
- * which cannot see this library, the writers fail when created.
+ * which cannot see this library, the writers fail when created. They also fail when created if generated code writes packed
+ * fields, maps, strings or bytes by a calling convention {@linkplain CodedOutputStreamJsonSink} does not handle, rather than
+ * dropping those fields.
  */
 
 final class JsonCodedOutputStreamFactory {
@@ -47,6 +49,7 @@ final class JsonCodedOutputStreamFactory {
             // smoke test: resolves the sink interface from protobuf's class loader
             CodedOutputStream output = (CodedOutputStream) constructor.invokeExact((CodedOutputStreamSink) new NoopSink());
             output.writeInt32(1, 1);
+            CodedOutputStreamConventions.verify(constructor);
         } catch (Throwable e) {
             constructor = null;
             failure = e;

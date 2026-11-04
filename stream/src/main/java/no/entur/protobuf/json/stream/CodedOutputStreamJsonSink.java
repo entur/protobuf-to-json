@@ -719,7 +719,7 @@ final class CodedOutputStreamJsonSink implements CodedOutputStreamSink {
         }
     }
 
-    // ---- not used by generated code for regular fields ----
+    // ---- not used by generated code for regular fields; CodedOutputStreamConventions fails creation if that changes ----
 
     @Override
     public void writeRawBytes(ByteBuffer value) {
