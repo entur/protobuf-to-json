@@ -129,8 +129,8 @@ writers do the same.
 When the writer filters, another class is generated per message type, with the same structure, and for each field:
 
  * paths: the field name is matched against the paths. A pruned field is replaced (`"[removed]"`) without calling its
-   getter. An anonymized scalar is replaced (`"*"`), while anonymized messages, arrays and objects keep their structure,
-   with their values replaced
+   getter, except a proto3 scalar without presence: that value is read to tell it apart from the default. An anonymized
+   scalar is replaced (`"*"`), while anonymized messages, arrays and objects keep their structure, with their values replaced
  * max string length: strings and bytes are truncated while written
  * max size: each write returns false once the output is full, and the generated code then closes the open objects and
    arrays and returns false

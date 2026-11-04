@@ -50,7 +50,8 @@ import java.util.Set;
  * {@linkplain TranscodingProtobufJsonWriter} with filtering, like json-log-filter:
  * <ul>
  *     <li>anonymize paths: the structure is kept, but every scalar value is replaced</li>
- *     <li>prune paths: the whole value is replaced, without reading it</li>
+ *     <li>prune paths: the whole value is replaced and not written. The message is serialized first, so the field is
+ *     still read; a pruned field's bytes are then skipped rather than decoded</li>
  *     <li>max string length: long strings are truncated, also when written directly from UTF-8 bytes, but not 64-bit
  *     integers, enum names, timestamps and durations</li>
  *     <li>max size: writing stops at the first value which does not fit, then the open objects and arrays are closed</li>
