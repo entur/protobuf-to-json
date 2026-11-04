@@ -39,6 +39,7 @@ import java.util.Map;
  * (the <a href="https://protobuf.dev/programming-guides/json/">ProtoJSON format</a>, without insignificant whitespace).
  * Lite messages have no descriptors, so the fields are found once per message class from the generated code
  * (see {@linkplain LiteMessagePlan}), and read via reflection.
+ * Based on protobuf's {@code MessageLiteToString} (BSD-3-Clause); the license text is in the NOTICE file.
  * <br><br>
  * Differences from JsonFormat, as type information is missing in lite messages:
  * <ul>

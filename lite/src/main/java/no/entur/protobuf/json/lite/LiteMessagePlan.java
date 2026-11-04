@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * the capitalization done for accessor names (the first letter, and letters after digits) are assumed to be lower case,
  * as recommended by the protobuf style guide. Custom json_name options are not available in lite messages.
  * <br><br>
- * Based on the reflection-based {@code MessageLiteToString} of protobuf (BSD-3-Clause).
+ * Based on the reflection-based {@code MessageLiteToString} of protobuf (BSD-3-Clause); the license text is in the NOTICE file.
  */
 
 final class LiteMessagePlan {
