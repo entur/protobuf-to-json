@@ -81,6 +81,14 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
         return self();
     }
 
+    /**
+     * Prune these paths. A present value is replaced and not written. A proto3 scalar without presence is still read,
+     * to tell it apart from the default. See the README.
+     *
+     * @param paths path expressions
+     * @return this builder
+     */
+
     public B withPrunePaths(String... paths) {
         return withPrunePaths(Arrays.asList(paths));
     }

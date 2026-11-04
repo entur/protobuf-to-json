@@ -32,7 +32,8 @@ import java.util.Map;
  * {@linkplain LiteProtobufJsonWriter} with filtering, like json-log-filter:
  * <ul>
  *     <li>anonymize paths: the structure is kept, but every scalar value is replaced</li>
- *     <li>prune paths: the whole value is replaced, without reading it</li>
+ *     <li>prune paths: the whole value is replaced and not written. A field without presence is still read, to tell it
+ *     apart from the default; a field with presence is not</li>
  *     <li>max string length: long strings are truncated, but not 64-bit integers, enum names, timestamps and durations</li>
  *     <li>max size: writing stops at the first value which does not fit, then the open objects and arrays are closed</li>
  * </ul>
@@ -126,7 +127,7 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
                     FilterType type = anonymize ? FilterType.ANON : values.match(field);
                     int nameSize = values.getNameSize(field);
                     if (type == FilterType.PRUNE) {
-                        // without reading the value
+                        // a field without presence was already read, to tell it apart from the default
                         if (!values.writePruned(field.name, nameSize)) {
                             return false;
                         }
