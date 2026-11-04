@@ -9,7 +9,7 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class ExpressionNode {
+class ExpressionNode {
 
     private String path;
     private int index;

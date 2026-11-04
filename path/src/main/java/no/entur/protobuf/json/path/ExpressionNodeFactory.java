@@ -13,7 +13,7 @@ import java.util.Map;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class ExpressionNodeFactory {
+class ExpressionNodeFactory {
 
     public ExpressionNode toExpressionNode(String[] expressions, FilterType[] types) {
         // if the same path is both pruned and anonymized, prune takes precedence

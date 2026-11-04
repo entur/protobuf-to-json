@@ -8,7 +8,7 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class StarMultiPathItem extends PathItem {
+class StarMultiPathItem extends PathItem {
 
     private final String[] fieldNames;
 

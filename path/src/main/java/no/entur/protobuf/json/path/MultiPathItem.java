@@ -6,7 +6,7 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class MultiPathItem extends PathItem {
+class MultiPathItem extends PathItem {
 
     private final String[] fieldNames;
 

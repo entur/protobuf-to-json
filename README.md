@@ -252,6 +252,13 @@ Group id is `no.entur.protobuf-to-json`.
 | `test-support` | not published | the test messages, random messages and the benchmark payloads, also as files for the lite modules | - | 17 |
 | `benchmarks` | not published | JMH benchmarks, see [benchmarks](benchmarks/README.md) | 2 and 3 | 25 |
 
+## Supported API
+
+Use the writer classes and `AbstractProtobufJsonWriterBuilder`. On the module path, require the writer module
+(`no.entur.protobuf.json.accessor`, `no.entur.protobuf.json.stream`, `no.entur.protobuf.json.transcode`,
+`no.entur.protobuf.json.lite` or `no.entur.protobuf.json.utility`). `MessageWriters`, `CodedOutputStreamSink` and the
+`plan` package are public so generated code can call them, not for application use. `no.entur.protobuf.json.filter`
+and `no.entur.protobuf.json.path.any` are not exported to application modules.
 
 ## License
 [Apache-2.0](LICENSE.txt).

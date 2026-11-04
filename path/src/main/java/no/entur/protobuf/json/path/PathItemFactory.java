@@ -9,7 +9,7 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class PathItemFactory {
+class PathItemFactory {
 
     public PathItem create(ExpressionNode root) {
         // index 1 ... n so that easier to use in filters

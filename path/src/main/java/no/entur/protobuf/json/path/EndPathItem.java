@@ -6,7 +6,7 @@ package no.entur.protobuf.json.path;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class EndPathItem extends PathItem {
+class EndPathItem extends PathItem {
 
     public final FilterType filterType;
 

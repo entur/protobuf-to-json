@@ -4,7 +4,7 @@ package no.entur.protobuf.json.path;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class SinglePathItem extends PathItem {
+class SinglePathItem extends PathItem {
 
     private final String fieldName;
 
