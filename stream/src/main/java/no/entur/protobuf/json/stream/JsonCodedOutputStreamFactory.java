@@ -16,6 +16,8 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -30,11 +32,15 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * and {@linkplain MethodHandles.Lookup.ClassOption#NESTMATE}), which allows it to invoke the private constructor.
  * <br><br>
  * If the subclass cannot be generated, i.e. for an incompatible protobuf version, or if protobuf is loaded by a class loader
- * which cannot see this library, the writers fail when created. They also fail when created if the sinks do not handle how
- * this protobuf version writes messages (see {@linkplain CodedOutputStreamConventions}), rather than drop or garble fields.
+ * which cannot see this library, or if the sinks do not handle how this protobuf version writes messages (see
+ * {@linkplain CodedOutputStreamConventions}), the writers delegate to the transcoding writers, which write the same JSON
+ * (more slowly), rather than fail or drop or garble fields. This is checked once, when the first writer is created, and
+ * logged once as a warning (see {@linkplain #isAvailable()}).
  */
 
 final class JsonCodedOutputStreamFactory {
+
+    private static final Logger LOGGER = Logger.getLogger(JsonCodedOutputStreamFactory.class.getName());
 
     private static final MethodHandle CONSTRUCTOR;
     private static final Throwable FAILURE;
@@ -61,7 +67,7 @@ final class JsonCodedOutputStreamFactory {
 
     /**
      * Check that JSON-writing {@linkplain CodedOutputStream}s can be created, and that the sinks handle how this protobuf
-     * version writes messages to them. Called when a writer is created.
+     * version writes messages to them.
      *
      * @throws IllegalStateException if not
      */
@@ -69,6 +75,44 @@ final class JsonCodedOutputStreamFactory {
     static void verify() {
         verifyConstructor();
         CodedOutputStreamConventions.verify();
+    }
+
+    /**
+     * Whether the stream writers can write messages themselves (see {@linkplain #verify()}). Checked once, when the first
+     * writer is created. If not, the reason is logged once as a warning, and the writers delegate to the transcoding writers.
+     *
+     * @return true if JSON-writing {@linkplain CodedOutputStream}s can be used
+     */
+
+    static boolean isAvailable() {
+        return Availability.AVAILABLE;
+    }
+
+    /**
+     * Run a check, and log a warning if it fails.
+     *
+     * @param check the check, i.e. {@linkplain #verify()}
+     * @return true if the check passed
+     */
+
+    static boolean check(Runnable check) {
+        try {
+            check.run();
+            return true;
+        } catch (RuntimeException | LinkageError e) {
+            LOGGER.log(Level.WARNING, "The CodedOutputStream writers cannot write messages with this protobuf version and class loader, "
+                    + "and delegate to the transcoding writers, which write the same JSON more slowly", e);
+            return false;
+        }
+    }
+
+    private static final class Availability {
+
+        // the convention check creates sinks, which use the constructor, so it is checked after the factory is initialized
+        private static final boolean AVAILABLE = check(JsonCodedOutputStreamFactory::verify);
+
+        private Availability() {
+        }
     }
 
     private static void verifyConstructor() {
