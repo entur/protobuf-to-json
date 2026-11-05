@@ -212,7 +212,7 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
@@ -220,6 +220,7 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
             m = ((Message.Builder) message).buildPartial();
         }
         MessageWriters.getWriter(m.getClass()).write(generator, null, m, this);
+        return true;
     }
 
     @Override

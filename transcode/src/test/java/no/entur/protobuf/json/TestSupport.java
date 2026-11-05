@@ -36,15 +36,27 @@ public final class TestSupport {
     }
 
     /**
+     * The output of a write, and whether the whole message was written.
+     */
+
+    public record Written(String json, boolean complete) {
+    }
+
+    /**
      * Write to a byte-based (UTF-8) generator.
      */
 
     public static String writeBytes(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) throws Exception {
+        return writtenBytes(writer, message).json();
+    }
+
+    public static Written writtenBytes(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
+        boolean complete;
         try (JsonGenerator generator = MAPPER.createGenerator(output)) {
-            writer.write(message, generator);
+            complete = writer.write(message, generator);
         }
-        return output.toString(StandardCharsets.UTF_8);
+        return new Written(output.toString(StandardCharsets.UTF_8), complete);
     }
 
     /**
@@ -52,11 +64,16 @@ public final class TestSupport {
      */
 
     public static String writeChars(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) throws Exception {
+        return writtenChars(writer, message).json();
+    }
+
+    public static Written writtenChars(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) throws Exception {
         StringWriter output = new StringWriter();
+        boolean complete;
         try (JsonGenerator generator = MAPPER.createGenerator(output)) {
-            writer.write(message, generator);
+            complete = writer.write(message, generator);
         }
-        return output.toString();
+        return new Written(output.toString(), complete);
     }
 
     public static JsonFormatComparison comparison(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer) {

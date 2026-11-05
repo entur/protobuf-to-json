@@ -193,17 +193,20 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         String expectedBytes = referenceFilter.process(json, ReferenceFilter.UTF8, untruncated);
 
         ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = filtered(filter);
-        String actualChars = TestSupport.writeChars(writer, message);
-        String actualBytes = TestSupport.writeBytes(writer, message);
+        TestSupport.Written actualChars = TestSupport.writtenChars(writer, message);
+        TestSupport.Written actualBytes = TestSupport.writtenBytes(writer, message);
 
         String text = description + " " + filter + " " + json;
-        assertWithMessage("chars " + text).that(actualChars).isEqualTo(expectedChars);
-        assertWithMessage("bytes " + text).that(actualBytes).isEqualTo(expectedBytes);
+        assertWithMessage("chars " + text).that(actualChars.json()).isEqualTo(expectedChars);
+        assertWithMessage("bytes " + text).that(actualBytes.json()).isEqualTo(expectedBytes);
+        // the writer reports truncation where the reference filter truncates
+        assertWithMessage("chars complete " + text).that(actualChars.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.CHARS, untruncated));
+        assertWithMessage("bytes complete " + text).that(actualBytes.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.UTF8, untruncated));
         if (filter.maxSize() != -1 && json.startsWith("{")) {
-            assertWithMessage("chars " + text).that(actualChars.length()).isAtMost(filter.maxSize());
-            assertWithMessage("bytes " + text).that(actualBytes.getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
+            assertWithMessage("chars " + text).that(actualChars.json().length()).isAtMost(filter.maxSize());
+            assertWithMessage("bytes " + text).that(actualBytes.json().getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
         }
-        return actualBytes;
+        return actualBytes.json();
     }
 
 
@@ -374,6 +377,23 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
             write(message, filter.withMaxSize(maxSize));
         }
         assertThat(write(message, filter.withMaxSize(48))).isEqualTo("{\"optionalInt32\":1,\"optionalString\":\"[removed]\"}");
+    }
+
+    @Test
+    public void writeReportsTruncation() throws Exception {
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalInt32(1).setOptionalString("a".repeat(100)).build();
+
+        assertThat(TestSupport.writtenBytes(unfiltered(), message).complete()).isTrue();
+        assertThat(TestSupport.writtenBytes(filtered(Filter.maxStringLength(5)), message).complete()).isTrue();
+        assertThat(TestSupport.writtenBytes(filtered(Filter.maxSize(1024)), message).complete()).isTrue();
+
+        TestSupport.Written truncated = TestSupport.writtenBytes(filtered(Filter.maxSize(48)), message);
+        assertThat(truncated.json()).isEqualTo("{\"optionalInt32\":1}");
+        assertThat(truncated.complete()).isFalse();
+
+        // a root scalar value is always written
+        Timestamp timestamp = Timestamp.newBuilder().setSeconds(1700000000).build();
+        assertThat(TestSupport.writtenBytes(filtered(Filter.maxSize(3)), timestamp).complete()).isTrue();
     }
 
     @Test

@@ -36,7 +36,7 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
@@ -51,6 +51,7 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
         } else {
             new FilteringCodedOutputStreamJsonSink(plans, transcoder, values).write(m);
         }
+        return !values.isStopped();
     }
 
     @Override
