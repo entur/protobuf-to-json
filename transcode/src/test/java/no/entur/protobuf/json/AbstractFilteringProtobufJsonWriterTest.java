@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Duration;
 import com.google.protobuf.Int64Value;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.ListValue;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
@@ -42,6 +43,7 @@ import java.util.function.Supplier;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * A filtering writer must write the same as filtering the output of the plain writer with the {@linkplain ReferenceFilter},
@@ -56,13 +58,18 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
     private static final int[] MAX_STRING_LENGTHS = {-1, -1, 0, 1, 3, 8, 20, 50};
 
     /**
-     * Filter options; messages are null for the defaults.
+     * Filter options, and the other writer options; messages are null for the defaults.
      */
 
-    public record Filter(List<String> anonymizes, List<String> prunes, int maxStringLength, int maxSize, String anonymizeMessage, String pruneMessage, String truncateMessage) {
+    public record Filter(List<String> anonymizes, List<String> prunes, int maxStringLength, int maxSize, String anonymizeMessage, String pruneMessage, String truncateMessage,
+                         UnresolvedAny unresolvedAny) {
 
         public Filter(List<String> anonymizes, List<String> prunes, int maxStringLength, int maxSize) {
-            this(anonymizes, prunes, maxStringLength, maxSize, null, null, null);
+            this(anonymizes, prunes, maxStringLength, maxSize, null, null, null, UnresolvedAny.FAIL);
+        }
+
+        public static Filter none() {
+            return new Filter(List.of(), List.of(), -1, -1);
         }
 
         public static Filter anonymize(String... paths) {
@@ -82,15 +89,19 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         }
 
         public Filter withMaxSize(int maxSize) {
-            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage);
+            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage, unresolvedAny);
         }
 
         public Filter withMaxStringLength(int maxStringLength) {
-            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage);
+            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage, unresolvedAny);
         }
 
         public Filter withMessages(String anonymizeMessage, String pruneMessage, String truncateMessage) {
-            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage);
+            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage, unresolvedAny);
+        }
+
+        public Filter withUnresolvedAny(UnresolvedAny unresolvedAny) {
+            return new Filter(anonymizes, prunes, maxStringLength, maxSize, anonymizeMessage, pruneMessage, truncateMessage, unresolvedAny);
         }
 
         public boolean isEmpty() {
@@ -101,7 +112,8 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
             builder.withAnonymizePaths(anonymizes)
                     .withPrunePaths(prunes)
                     .withMaxStringLength(maxStringLength)
-                    .withMaxSize(maxSize);
+                    .withMaxSize(maxSize)
+                    .withUnresolvedAny(unresolvedAny);
             if (anonymizeMessage != null) {
                 builder.withAnonymizeMessage(anonymizeMessage);
             }
@@ -123,6 +135,11 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
     }
 
     protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> unfiltered();
+
+    /**
+     * @param filter options
+     * @return a writer with the options; without filter options, the builders return the plain writer
+     */
 
     protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> filtered(Filter filter);
 
@@ -187,10 +204,11 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
 
     protected String assertSameAsReferenceFilter(MessageOrBuilder message, String json, Filter filter, String description) throws Exception {
         ReferenceFilter referenceFilter = filter.toReferenceFilter();
-        // the reference filter only sees JSON, so tell it which strings are not text
+        // the reference filter only sees JSON, so tell it which strings are not text, and where the unresolved Any values are
         Set<List<Object>> untruncated = UntruncatedValues.find(json, message.getDescriptorForType(), TestSupport.TYPE_REGISTRY);
-        String expectedChars = referenceFilter.process(json, ReferenceFilter.CHARS, untruncated);
-        String expectedBytes = referenceFilter.process(json, ReferenceFilter.UTF8, untruncated);
+        Set<List<Object>> unresolved = UntruncatedValues.findUnresolvedAnys(json, message.getDescriptorForType(), TestSupport.TYPE_REGISTRY);
+        String expectedChars = referenceFilter.process(json, ReferenceFilter.CHARS, untruncated, unresolved);
+        String expectedBytes = referenceFilter.process(json, ReferenceFilter.UTF8, untruncated, unresolved);
 
         ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = filtered(filter);
         TestSupport.Written actualChars = TestSupport.writtenChars(writer, message);
@@ -200,8 +218,8 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         assertWithMessage("chars " + text).that(actualChars.json()).isEqualTo(expectedChars);
         assertWithMessage("bytes " + text).that(actualBytes.json()).isEqualTo(expectedBytes);
         // the writer reports truncation where the reference filter truncates
-        assertWithMessage("chars complete " + text).that(actualChars.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.CHARS, untruncated));
-        assertWithMessage("bytes complete " + text).that(actualBytes.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.UTF8, untruncated));
+        assertWithMessage("chars complete " + text).that(actualChars.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.CHARS, untruncated, unresolved));
+        assertWithMessage("bytes complete " + text).that(actualBytes.complete()).isEqualTo(!referenceFilter.truncates(json, ReferenceFilter.UTF8, untruncated, unresolved));
         if (filter.maxSize() != -1 && json.startsWith("{")) {
             assertWithMessage("chars " + text).that(actualChars.json().length()).isAtMost(filter.maxSize());
             assertWithMessage("bytes " + text).that(actualBytes.json().getBytes(StandardCharsets.UTF_8).length).isAtMost(filter.maxSize());
@@ -209,6 +227,151 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         return actualBytes.json();
     }
 
+
+    // ---- unresolved google.protobuf.Any ----
+
+    private static final String UNRESOLVED_TYPE_URL = "type.googleapis.com/unknown.Type";
+
+    private static Any unresolved(ByteString value) {
+        return Any.newBuilder().setTypeUrl(UNRESOLVED_TYPE_URL).setValue(value).build();
+    }
+
+    @Test
+    public void unresolvedAnyWritesTypeAndBase64() throws Exception {
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = filtered(Filter.none().withUnresolvedAny(UnresolvedAny.VALUE));
+        Any unknown = unresolved(ByteString.copyFrom(new byte[]{0, 1, 2, (byte) 0xff}));
+
+        String expected = "{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"AAEC/w==\"}";
+        assertThat(TestSupport.writeBytes(writer, unknown)).isEqualTo(expected);
+        assertThat(TestSupport.writeChars(writer, unknown)).isEqualTo(expected);
+        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(unknown).build()))
+                .isEqualTo("{\"optionalAny\":" + expected + "}");
+
+        assertThat(TestSupport.writeBytes(writer, unresolved(ByteString.EMPTY))).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"\"}");
+        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(Any.getDefaultInstance()).build()))
+                .isEqualTo("{\"optionalAny\":{}}");
+        // the same as JsonFormat: trailing slashes are ignored
+        assertThat(TestSupport.writeBytes(writer, Any.newBuilder().setTypeUrl("a/unknown.Type//").build()))
+                .isEqualTo("{\"@type\":\"a/unknown.Type//\",\"@value\":\"\"}");
+
+        Any duration = Any.pack(Duration.newBuilder().setSeconds(1).build());
+        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(duration).build()))
+                .isEqualTo("{\"optionalAny\":{\"@type\":\"" + duration.getTypeUrl() + "\",\"value\":\"1s\"}}");
+
+        // an invalid type url always fails
+        for (String invalid : List.of("invalid", "type.googleapis.com/", "/")) {
+            Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
+            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer, value));
+            assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
+        }
+    }
+
+    @Test
+    public void unresolvedAnyIsFilteredLikeItsJson() throws Exception {
+        Any any = unresolved(ByteString.copyFrom(new byte[]{0, 1, 2, (byte) 0xff}));
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalAny(any).setOptionalInt32(1).build();
+        String json = TestSupport.writeBytes(filtered(Filter.none().withUnresolvedAny(UnresolvedAny.VALUE)), message);
+        String root = TestSupport.writeBytes(filtered(Filter.none().withUnresolvedAny(UnresolvedAny.VALUE)), any);
+        assertThat(json).isEqualTo("{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"AAEC/w==\"}}");
+        assertThat(root).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"AAEC/w==\"}");
+
+        String anonymized = "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"*\"}}";
+        String pruned = "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"[removed]\"}}";
+
+        // paths which match the fields of the unresolved Any
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny.@value"), anonymized);
+        assertUnresolvedAny(message, json, Filter.prune("$.optionalAny.@value"), pruned);
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny.*"),
+                "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"*\",\"@value\":\"*\"}}");
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny"),
+                "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"*\",\"@value\":\"*\"}}");
+        assertUnresolvedAny(message, json, Filter.prune("$.optionalAny"), "{\"optionalInt32\":1,\"optionalAny\":\"[removed]\"}");
+        assertUnresolvedAny(message, json, Filter.prune("$.optionalAny.@type"),
+                "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"[removed]\",\"@value\":\"AAEC/w==\"}}");
+        // paths which do not reach into the payload
+        assertUnresolvedAny(message, json, Filter.prune("$.optionalInt32", "$.optionalAny.@type.x", "$.optionalAny.@value.x", "$.other.x"),
+                "{\"optionalInt32\":\"[removed]\",\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"AAEC/w==\"}}");
+
+        // paths which could have matched within the payload
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny.password"), anonymized);
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny.value"), anonymized);
+        assertUnresolvedAny(message, json, Filter.anonymize("$.optionalAny.*.password"), anonymized);
+        assertUnresolvedAny(message, json, Filter.anonymize("$.*.password"), anonymized);
+        assertUnresolvedAny(message, json, Filter.anonymize("$..password"), anonymized);
+        assertUnresolvedAny(message, json, Filter.anonymize("$..optionalInt32"),
+                "{\"optionalInt32\":\"*\",\"optionalAny\":{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"*\"}}");
+        assertUnresolvedAny(message, json, Filter.prune("$.optionalAny.a.b.c"), pruned);
+        assertUnresolvedAny(message, json, Filter.prune("$..password"), pruned);
+        // prune beats anonymize
+        assertUnresolvedAny(message, json, new Filter(List.of("$.optionalAny.@value"), List.of("$..password"), -1, -1), pruned);
+        assertUnresolvedAny(message, json, new Filter(List.of("$..password"), List.of("$.optionalAny.x.y"), -1, -1), pruned);
+        // a shorter path filters the whole value, so the paths below it do not count
+        assertUnresolvedAny(message, json, new Filter(List.of("$.optionalAny.*"), List.of("$.optionalAny.x.y"), -1, -1),
+                "{\"optionalInt32\":1,\"optionalAny\":{\"@type\":\"*\",\"@value\":\"*\"}}");
+        assertUnresolvedAny(message, json, new Filter(List.of("$.optionalAny.x"), List.of("$.optionalAny.x.y"), -1, -1), anonymized);
+        assertUnresolvedAny(message, json, new Filter(List.of("$.optionalAny.x"), List.of("$.optionalAny.*.y"), -1, -1), pruned);
+
+        // max string length and size
+        assertUnresolvedAny(message, json, Filter.maxStringLength(4), null);
+        assertUnresolvedAny(message, json, Filter.maxSize(40), null);
+        assertUnresolvedAny(message, json, Filter.anonymize("$..x").withMaxSize(70), null);
+
+        assertUnresolvedAny(any, root, Filter.anonymize("$.@value"), "{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"*\"}");
+        assertUnresolvedAny(any, root, Filter.anonymize("$.value"), "{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"*\"}");
+        assertUnresolvedAny(any, root, Filter.prune("$.*"), "{\"@type\":\"[removed]\",\"@value\":\"[removed]\"}");
+        assertUnresolvedAny(any, root, Filter.prune("$.@type"), "{\"@type\":\"[removed]\",\"@value\":\"AAEC/w==\"}");
+    }
+
+    /**
+     * Write with a filter, and check against the reference filter, which is told where the unresolved Any values are.
+     *
+     * @param expected expected output, or null to only compare with the reference filter
+     */
+
+    private void assertUnresolvedAny(MessageOrBuilder message, String json, Filter filter, String expected) throws Exception {
+        String actual = assertSameAsReferenceFilter(message, json, filter.withUnresolvedAny(UnresolvedAny.VALUE), "");
+        if (expected != null) {
+            assertWithMessage(filter.toString()).that(actual).isEqualTo(expected);
+        }
+    }
+
+    @Test
+    public void unresolvedAnyRandomFilters() throws Exception {
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> resolving = unfiltered();
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> unresolving = filtered(Filter.none().withUnresolvedAny(UnresolvedAny.VALUE));
+        Random random = new Random(1);
+        for (int seed = 0; seed < 100; seed++) {
+            // the same random payloads, as resolved and as unresolved Any values, at several depths
+            TestAllTypesProto3 payload = new RandomMessages(seed).fill(TestAllTypesProto3.newBuilder());
+            TestAllTypesProto3 message = withAnys(unresolved(payload.toByteString()), new Random(seed));
+            TestAllTypesProto3 resolved = withAnys(Any.pack(payload), new Random(seed));
+
+            String json = TestSupport.writeBytes(unresolving, message);
+            // the paths of the resolved payloads reach into the unresolved payloads
+            Set<String> paths = new LinkedHashSet<>(paths(json));
+            paths.addAll(paths(TestSupport.writeBytes(resolving, resolved)));
+            List<String> candidates = new ArrayList<>(paths);
+            int size = json.getBytes(StandardCharsets.UTF_8).length;
+            for (int i = 0; i < FILTERS_PER_MESSAGE; i++) {
+                Filter filter = randomFilter(random, candidates, size).withUnresolvedAny(UnresolvedAny.VALUE);
+                assertSameAsReferenceFilter(message, json, filter, "seed " + seed);
+            }
+        }
+    }
+
+    private static TestAllTypesProto3 withAnys(Any any, Random random) {
+        TestAllTypesProto3.Builder builder = TestAllTypesProto3.newBuilder().setOptionalAny(any).setOptionalInt32(random.nextInt(10));
+        if (random.nextBoolean()) {
+            builder.addRepeatedAny(any).addRepeatedAny(any);
+        }
+        if (random.nextBoolean()) {
+            builder.setOptionalNestedMessage(NestedMessage.newBuilder().setCorecursive(TestAllTypesProto3.newBuilder().setOptionalAny(any)));
+        }
+        if (random.nextBoolean()) {
+            builder.putMapStringNestedMessage("k", NestedMessage.newBuilder().setCorecursive(TestAllTypesProto3.newBuilder().addRepeatedAny(any)).build());
+        }
+        return builder.build();
+    }
 
     // ---- targeted tests; write(..) also checks against the reference filter ----
 

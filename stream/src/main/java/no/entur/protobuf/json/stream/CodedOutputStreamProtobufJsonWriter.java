@@ -5,6 +5,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.AbstractProtobufJsonWriterBuilder;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.plan.MessagePlan;
 import no.entur.protobuf.json.plan.MessagePlan.Plans;
@@ -58,9 +59,9 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
         public ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> build() {
             JsonFilter filter = buildFilter();
             if (filter != null) {
-                return new FilteringCodedOutputStreamProtobufJsonWriter(typeRegistry, filter);
+                return new FilteringCodedOutputStreamProtobufJsonWriter(typeRegistry, filter, unresolvedAny);
             }
-            return new CodedOutputStreamProtobufJsonWriter(typeRegistry);
+            return new CodedOutputStreamProtobufJsonWriter(typeRegistry, unresolvedAny);
         }
     }
 
@@ -68,8 +69,12 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
     private final TranscodingProtobufJsonWriter transcoder;
 
     protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry) {
+        this(typeRegistry, UnresolvedAny.FAIL);
+    }
+
+    protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
         JsonCodedOutputStreamFactory.verify();
-        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry);
+        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry, unresolvedAny);
     }
 
     @Override

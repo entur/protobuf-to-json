@@ -26,4 +26,14 @@ public class SinglePathItem extends PathItem {
         }
         return this;
     }
+
+    @Override
+    FilterType getTypeWithin(String[] fieldNames) {
+        return contains(fieldNames, fieldName) ? null : next.getStrongestType();
+    }
+
+    @Override
+    FilterType getStrongestType() {
+        return next.getStrongestType();
+    }
 }

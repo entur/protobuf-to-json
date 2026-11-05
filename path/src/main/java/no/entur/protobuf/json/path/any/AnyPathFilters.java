@@ -29,9 +29,26 @@ public class AnyPathFilters {
     }
 
     private final Map<String, FilterType> names;
+    private final FilterType strongestType;
 
     private AnyPathFilters(Map<String, FilterType> names) {
         this.names = names;
+        FilterType type = null;
+        for (FilterType value : names.values()) {
+            type = FilterType.strongest(type, value);
+        }
+        this.strongestType = type;
+    }
+
+    /**
+     * The strongest filter type of all the field names, i.e. for a value which is written opaquely, within which any of
+     * them could match.
+     *
+     * @return the strongest filter type, or null if there are no field names
+     */
+
+    public FilterType getStrongestType() {
+        return strongestType;
     }
 
     /**

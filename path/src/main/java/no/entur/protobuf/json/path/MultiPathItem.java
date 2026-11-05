@@ -40,4 +40,24 @@ public class MultiPathItem extends PathItem {
         }
         return this;
     }
+
+    @Override
+    FilterType getTypeWithin(String[] excluded) {
+        FilterType type = null;
+        for (int i = 0; i < fieldNames.length; i++) {
+            if (!contains(excluded, fieldNames[i])) {
+                type = FilterType.strongest(type, next[i].getStrongestType());
+            }
+        }
+        return type;
+    }
+
+    @Override
+    FilterType getStrongestType() {
+        FilterType type = null;
+        for (PathItem item : next) {
+            type = FilterType.strongest(type, item.getStrongestType());
+        }
+        return type;
+    }
 }

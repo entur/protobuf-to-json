@@ -5,6 +5,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.AbstractProtobufJsonWriterBuilder;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.plan.MessagePlan.Plans;
 import no.entur.protobuf.json.plan.ProtobufJsonWriterSupport;
@@ -174,9 +175,9 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
             MessageWriters.register(types, filter != null);
             ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer;
             if (filter != null) {
-                writer = new FilteringAccessorProtobufJsonWriter(typeRegistry, filter);
+                writer = new FilteringAccessorProtobufJsonWriter(typeRegistry, filter, unresolvedAny);
             } else {
-                writer = new AccessorProtobufJsonWriter(typeRegistry);
+                writer = new AccessorProtobufJsonWriter(typeRegistry, unresolvedAny);
             }
             warmUp(writer);
             return writer;
@@ -208,7 +209,11 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
     final TranscodingProtobufJsonWriter transcoder;
 
     protected AccessorProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry) {
-        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry);
+        this(typeRegistry, UnresolvedAny.FAIL);
+    }
+
+    protected AccessorProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
+        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry, unresolvedAny);
     }
 
     @Override

@@ -40,6 +40,48 @@ public class PathFilterTest {
         return type;
     }
 
+    /**
+     * Walk to an object, given as the field names to it, and get the type of the paths which go on into it other than
+     * through the given field names.
+     */
+
+    private static FilterType typeWithin(PathFilter filter, List<String> names, String... fieldNames) {
+        PathItem item = filter.getPathItem();
+        for (int i = 0; i < names.size(); i++) {
+            int level = i + 1;
+            item = item.constrain(level).matchPath(level, names.get(i));
+            assertFalse(item.hasType());
+        }
+        int level = names.size() + 1;
+        return item.constrain(level).getTypeWithin(level, fieldNames);
+    }
+
+    @Test
+    public void typeWithin() {
+        String[] fields = {"@type", "@value"};
+        List<String> any = Arrays.asList("a", "b");
+
+        // paths through the given field names, or which do not reach the object, do not count
+        assertNull(typeWithin(PathFilter.create(Arrays.asList("$.a.b.@type", "$.a.b.@value.x", "$.a.c.x", "$.x"), null), any, fields));
+        assertNull(typeWithin(PathFilter.create(Arrays.asList("$.a.b.x"), null), Arrays.asList("a", "c"), fields));
+        // other names count, also deeper
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.a.b.x"), null), any, fields));
+        assertEquals(FilterType.PRUNE, typeWithin(PathFilter.create(Arrays.asList("$.a.b.x"), Arrays.asList("$.a.b.y.z")), any, fields));
+        assertEquals(FilterType.PRUNE, typeWithin(PathFilter.create(null, Arrays.asList("$.a.*.y", "$.a.b.@type")), any, fields));
+        // a wildcard counts
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.a.b.*"), null), any, fields));
+        assertEquals(FilterType.PRUNE, typeWithin(PathFilter.create(Arrays.asList("$.a.b.@type"), Arrays.asList("$.a.b.*.x")), any, fields));
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.*.*.x"), null), any, fields));
+        // a path covered by a shorter path does not count
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.a.b.x"), Arrays.asList("$.a.b.x.y")), any, fields));
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.a.b.*"), Arrays.asList("$.a.b.x.y")), any, fields));
+        // root
+        assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.x"), null), Collections.emptyList(), fields));
+        assertNull(typeWithin(PathFilter.create(Arrays.asList("$.@value"), null), Collections.emptyList(), fields));
+        // only at the level of the item
+        assertNull(PathFilter.create(Arrays.asList("$.a.b.x"), null).getPathItem().getTypeWithin(2, fields));
+    }
+
     @Test
     public void absoluteAndAnyPaths() {
         PathFilter filter = PathFilter.create(Arrays.asList("$.a.b", "$..secret"), Collections.singletonList("$.c.*.d"));
