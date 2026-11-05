@@ -24,7 +24,7 @@ import java.io.IOException;
  * or if writing probe messages shows that this protobuf version writes fields in a way the writer does not handle, the writer
  * logs a warning (once) and delegates to {@linkplain TranscodingProtobufJsonWriter}, which writes the same JSON more slowly.
  * {@linkplain com.google.protobuf.DynamicMessage}s are written the same way, via their reflection-based serialization.
- * Writing fails for messages whose (custom) serialization writes raw bytes.
+ * Writing fails for messages whose (custom) serialization writes raw byte arrays or buffers.
  * <br><br>
  * The output is the same as for {@linkplain TranscodingProtobufJsonWriter}, which also writes the well-known types and the
  * contents of google.protobuf.Any values; see it for differences from JsonFormat.
