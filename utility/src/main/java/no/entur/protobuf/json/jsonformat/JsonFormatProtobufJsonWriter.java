@@ -30,8 +30,9 @@ public class JsonFormatProtobufJsonWriter implements ProtobufJsonWriter<MessageO
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         generator.writeRawValue(writeAsString(message));
+        return true;
     }
 
     @Override

@@ -21,10 +21,12 @@ public interface ProtobufJsonWriter<M, G> {
      *
      * @param message   message or builder
      * @param generator generator positioned where a value can be written
+     * @return true if the whole message was written, false if writing stopped because of the max size (the output is
+     * then truncated, but still valid JSON)
      * @throws IOException if the message could not be written
      */
 
-    void write(M message, G generator) throws IOException;
+    boolean write(M message, G generator) throws IOException;
 
     /**
      * Write a message as a JSON string.

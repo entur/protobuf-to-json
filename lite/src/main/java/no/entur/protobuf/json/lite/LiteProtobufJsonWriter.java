@@ -41,6 +41,7 @@ import java.util.Objects;
  * (the <a href="https://protobuf.dev/programming-guides/json/">ProtoJSON format</a>, without insignificant whitespace).
  * Lite messages have no descriptors, so the fields are found once per message class from the generated code
  * (see {@linkplain LiteMessagePlan}), and read via reflection.
+ * Based on protobuf's {@code MessageLiteToString} (BSD-3-Clause); the license text is in the NOTICE file.
  * <br><br>
  * Differences from JsonFormat, as type information is missing in lite messages:
  * <ul>
@@ -120,7 +121,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
     }
 
     @Override
-    public void write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
         MessageLite m = toMessage(message);
         LiteMessagePlan plan = plans.get(m.getClass());
         boolean utf8 = LiteJsonValues.isUtf8(generator);
@@ -129,6 +130,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
         } else {
             writeMessage(m, plan, generator, utf8, null);
         }
+        return true;
     }
 
     @Override

@@ -78,7 +78,7 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
@@ -92,6 +92,7 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
         } else {
             new CodedOutputStreamJsonSink(plans, transcoder, generator).write(m);
         }
+        return true;
     }
 
     @Override

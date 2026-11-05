@@ -53,7 +53,8 @@ import java.util.Set;
  * {@linkplain TranscodingProtobufJsonWriter} with filtering, like json-log-filter:
  * <ul>
  *     <li>anonymize paths: the structure is kept, but every scalar value is replaced</li>
- *     <li>prune paths: the whole value is replaced, without reading it</li>
+ *     <li>prune paths: the whole value is replaced and not written. The message is serialized first, so the field is
+ *     still read; a pruned field's bytes are then skipped rather than decoded</li>
  *     <li>max string length: long strings are truncated, also when written directly from UTF-8 bytes, but not 64-bit
  *     integers, enum names, timestamps and durations</li>
  *     <li>max size: writing stops at the first value which does not fit, then the open objects and arrays are closed</li>
@@ -96,14 +97,14 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        write(m, new FilteredJsonValues(filter, generator));
+        return write(m, new FilteredJsonValues(filter, generator));
     }
 
     @Override
@@ -116,10 +117,11 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
      *
      * @param message message
      * @param values  state of the write
+     * @return true if the whole message was written, false if writing stopped because of the max size
      * @throws IOException if writing fails
      */
 
-    public void write(Message message, FilteredJsonValues values) throws IOException {
+    public boolean write(Message message, FilteredJsonValues values) throws IOException {
         MessagePlan plan = plans.get(message.getDescriptorForType());
         if (plan.wellKnownType != null) {
             writeWellKnown(plan.wellKnownType, message, values, null, 0, false);
@@ -127,6 +129,7 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
             byte[] bytes = message.toByteArray();
             writeMessage(bytes, 0, bytes.length, plan, values, null, null, 0, false);
         }
+        return !values.isStopped();
     }
 
     /**

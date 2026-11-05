@@ -124,14 +124,14 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
     }
 
     @Override
-    public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        write(m, generator);
+        return write(m, generator);
     }
 
     @Override
@@ -139,7 +139,16 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 
-    public void write(Message message, JsonGenerator generator) throws IOException {
+    /**
+     * Write a message as a JSON value.
+     *
+     * @param message   message
+     * @param generator generator positioned where a value can be written
+     * @return true, as the whole message is always written
+     * @throws IOException if the message could not be written
+     */
+
+    public boolean write(Message message, JsonGenerator generator) throws IOException {
         MessagePlan plan = plans.get(message.getDescriptorForType());
         if (plan.wellKnownType != null) {
             writeWellKnown(plan.wellKnownType, message, generator);
@@ -147,6 +156,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
             byte[] bytes = message.toByteArray();
             writeMessage(bytes, 0, bytes.length, plan, generator, null);
         }
+        return true;
     }
 
     /**
