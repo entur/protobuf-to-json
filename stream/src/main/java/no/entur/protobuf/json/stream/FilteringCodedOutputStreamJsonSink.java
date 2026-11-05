@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * {@linkplain CodedOutputStreamJsonSink} with filtering. Every value is first prepared (see {@linkplain #prepare(FieldInfo)}),
  * which matches paths and starts the array or object of a repeated or map field, then written, anonymized, pruned or skipped.
- * Pruned messages are not serialized.
+ * Pruned messages are not serialized. Scalar values are received from the serializer and then discarded.
  * <br><br>
  * Once max size is reached, {@linkplain FilteredJsonValues} writes nothing more but closing brackets, while the frames
  * are still tracked so that the open arrays and objects are closed.

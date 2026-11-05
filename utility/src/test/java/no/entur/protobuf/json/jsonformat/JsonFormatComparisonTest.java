@@ -36,11 +36,12 @@ public class JsonFormatComparisonTest {
         private final JsonFormat.Printer printer = JsonFormat.printer().usingTypeRegistry(TYPE_REGISTRY).omittingInsignificantWhitespace();
 
         @Override
-        public void write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+        public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
             try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), printer.print(message))) {
                 parser.nextToken();
                 generator.copyCurrentStructure(parser);
             }
+            return true;
         }
 
         @Override
@@ -60,8 +61,9 @@ public class JsonFormatComparisonTest {
     private record FixedWriter(String json) implements ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> {
 
         @Override
-        public void write(MessageOrBuilder message, JsonGenerator generator) {
+        public boolean write(MessageOrBuilder message, JsonGenerator generator) {
             generator.writeRawValue(json);
+            return true;
         }
 
         @Override

@@ -184,7 +184,13 @@ Max size counts the JSON as written by a Jackson generator with default settings
 
 A field name is
 only written together with its value, and room for the closing brackets is reserved, so the output is always valid
-JSON. 
+JSON. `write(..)` returns `false` if writing stopped because of the max size, i.e. the output is truncated:
+
+```java
+boolean complete = writer.write(message, generator);
+```
+
+Only the max size makes `write(..)` return `false`; shortened strings (max string length), and pruned or anonymized values, do not.
 
 A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.
@@ -257,6 +263,8 @@ Group id is `no.entur.protobuf-to-json`.
 [Apache-2.0](LICENSE.txt).
 
 ## Third-party code:
+
+License texts are in [NOTICE](NOTICE), also packaged as `META-INF/NOTICE`.
 
  * the path matching (`path` module), and the size and truncation logic (`api` module), are ported from
    [json-log-filter](https://github.com/skjolber/json-log-filter) (Apache-2.0)

@@ -11,13 +11,13 @@ import no.entur.protobuf.json.filter.JsonStrings;
 /**
  * Builder with the filter options, as in json-log-filter:
  * <ul>
- *     <li>anonymize paths: keep the structure, but replace every scalar value with {@code "*"}</li>
+ *     <li>anonymize paths: keep the structure, but replace every scalar value with {@code "*"}. Field names and map keys are written as-is</li>
  *     <li>prune paths: replace the whole value with {@code "[removed]"}</li>
  *     <li>max string length: truncate long string values to {@code "<start>... + <number of removed characters>"}</li>
  *     <li>max size: stop writing at the first value which does not fit, and close the open objects and arrays</li>
  * </ul>
- * Path expressions refer to the JSON field names, i.e. {@code $.customer.email}, {@code /customer/email},
- * {@code $.*.email} or {@code $..email} (any depth). See {@linkplain no.entur.protobuf.json.path.PathExpressions}.
+ * Path expressions refer to the JSON field names, i.e. {@code $.customer.email}, {@code $.*.email}
+ * or {@code $..email} (any depth). There is no slash notation. See {@linkplain no.entur.protobuf.json.path.PathExpressions}.
  *
  * @param <B> builder type
  */
@@ -40,8 +40,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Truncate string values longer than this. Field names, and strings which are not text (64-bit integers, enum names,
-     * timestamps, durations, and NaN and infinity), are never truncated.
+     * Truncate string values longer than this. Field names and map keys, and strings which are not text (64-bit integers,
+     * enum names, timestamps, durations, and NaN and infinity), are never truncated.
      *
      * @param maxStringLength max length in UTF-16 characters, or -1 for no limit
      * @return this builder
@@ -57,7 +57,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
 
     /**
      * Max size of the JSON output, in bytes when writing to an output stream, otherwise in characters.
-     * The output is cut at the first value which does not fit, and the open objects and arrays are closed.
+     * The output is cut at the first value which does not fit, and the open objects and arrays are closed;
+     * {@linkplain ProtobufJsonWriter#write(Object, Object)} then returns false.
      *
      * @param maxSize max size, or -1 for no limit
      * @return this builder
@@ -80,6 +81,14 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
         return self();
     }
 
+    /**
+     * Prune these paths. A present value is replaced and not written. A proto3 scalar without presence is still read,
+     * to tell it apart from the default. See the README.
+     *
+     * @param paths path expressions
+     * @return this builder
+     */
+
     public B withPrunePaths(String... paths) {
         return withPrunePaths(Arrays.asList(paths));
     }
@@ -90,7 +99,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Anonymize fields with these names, at any depth.
+     * Anonymize fields with these names, at any depth, including a map entry whose key is one of these names.
+     * The name itself is still written.
      *
      * @param keys field names
      * @return this builder
@@ -108,7 +118,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Prune fields with these names, at any depth.
+     * Prune fields with these names, at any depth, including a map entry whose key is one of these names.
+     * The name itself is still written.
      *
      * @param keys field names
      * @return this builder

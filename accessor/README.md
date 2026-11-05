@@ -129,8 +129,8 @@ writers do the same.
 When the writer filters, another class is generated per message type, with the same structure, and for each field:
 
  * paths: the field name is matched against the paths. A pruned field is replaced (`"[removed]"`) without calling its
-   getter. An anonymized scalar is replaced (`"*"`), while anonymized messages, arrays and objects keep their structure,
-   with their values replaced
+   getter, except a proto3 scalar without presence: that value is read to tell it apart from the default. An anonymized
+   scalar is replaced (`"*"`), while anonymized messages, arrays and objects keep their structure, with their values replaced
  * max string length: strings and bytes are truncated while written
  * max size: each write returns false once the output is full, and the generated code then closes the open objects and
    arrays and returns false
@@ -152,7 +152,8 @@ These messages are transcoded instead, with `TranscodingProtobufJsonWriter`, whi
  * messages which are not generated, i.e. `DynamicMessage`
  * well-known types as the root message
  * message types for which no code can be generated: if an accessor is not found as expected, or if the class loaders of
-   the messages and of this library cannot see each other's classes
+   the messages and of this library cannot see each other's classes. That failure is logged at fine, once per message
+   class, when that level is enabled. DynamicMessage and the well-known types are expected fallbacks and are not logged.
 
 Message types registered with `withMessageTypes(..)` fail instead.
 
