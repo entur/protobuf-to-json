@@ -20,9 +20,11 @@ import java.io.IOException;
  * This is the fastest implementation, and allocates the least.
  * <br><br>
  * CodedOutputStream only has a private constructor, so a subclass is generated at runtime with the ClassFile API (Java 24+).
- * This depends on how protobuf's generated code and CodedOutputStream work internally; creating the writer fails if the
- * subclass cannot be generated. {@linkplain com.google.protobuf.DynamicMessage}s are written the same way, via their
- * reflection-based serialization.
+ * This depends on how protobuf's generated code and CodedOutputStream work internally. If the subclass cannot be generated,
+ * or if writing probe messages shows that this protobuf version writes fields in a way the writer does not handle, the writer
+ * logs a warning (once) and delegates to {@linkplain TranscodingProtobufJsonWriter}, which writes the same JSON more slowly.
+ * {@linkplain com.google.protobuf.DynamicMessage}s are written the same way, via their reflection-based serialization.
+ * Writing fails for messages whose (custom) serialization writes raw byte arrays or buffers.
  * <br><br>
  * The output is the same as for {@linkplain TranscodingProtobufJsonWriter}, which also writes the well-known types and the
  * contents of google.protobuf.Any values; see it for differences from JsonFormat.
@@ -66,14 +68,27 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
 
     private final Plans plans = new Plans();
     private final TranscodingProtobufJsonWriter transcoder;
+    private final boolean streaming;
 
     protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry) {
-        JsonCodedOutputStreamFactory.verify();
+        this(typeRegistry, JsonCodedOutputStreamFactory.isAvailable());
+    }
+
+    /**
+     * @param typeRegistry types for resolving google.protobuf.Any
+     * @param streaming    false to delegate to the transcoding writer
+     */
+
+    CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, boolean streaming) {
         this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry);
+        this.streaming = streaming;
     }
 
     @Override
     public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+        if (!streaming) {
+            return transcoder.write(message, generator);
+        }
         Message m;
         if (message instanceof Message msg) {
             m = msg;
