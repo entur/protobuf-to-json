@@ -168,6 +168,37 @@ public class CodedOutputStreamConventionsTest {
     }
 
     @Test
+    public void rejectsNoTagValuesAfterAnEncodedTag() {
+        // the sinks take the field number of a NoTag value from writeTag, not from a tag written as an untagged varint
+        int stringTag = tag(LEADING_COMMENTS, WireFormat.WIRETYPE_LENGTH_DELIMITED);
+        assertRejected(PACKED, output -> {
+            writePacked(output);
+            output.writeUInt32NoTag(stringTag);
+            output.writeStringNoTag("x");
+        });
+        assertRejected(PACKED, output -> {
+            writePacked(output);
+            output.writeUInt32NoTag(stringTag);
+            output.writeBytesNoTag(ByteString.copyFromUtf8("x"));
+        });
+        assertRejected(PACKED, output -> {
+            writePacked(output);
+            output.writeUInt32NoTag(stringTag);
+            output.writeByteArrayNoTag("x".getBytes(StandardCharsets.UTF_8));
+        });
+        assertRejected(OPTION, output -> {
+            output.writeUInt32NoTag(tag(NAME, WireFormat.WIRETYPE_LENGTH_DELIMITED));
+            output.writeMessageNoTag(NAME_PART);
+            output.writeBytes(STRING_VALUE, ByteString.copyFrom(BYTES));
+        });
+        assertRejected(OPTION, output -> {
+            output.writeMessage(NAME, NAME_PART);
+            output.writeUInt32NoTag(tag(STRING_VALUE, WireFormat.WIRETYPE_LENGTH_DELIMITED));
+            output.writeBytesNoTag(ByteString.copyFrom(BYTES));
+        });
+    }
+
+    @Test
     public void rejectsBoolsWrittenAsRawBytes() {
         // write(byte) is writeBoolNoTag
         UninterpretedOption.NamePart probe = UninterpretedOption.NamePart.newBuilder().setNamePart("a").setIsExtension(true).build();
