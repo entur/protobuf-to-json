@@ -140,6 +140,14 @@ final class MessageWriterGenerator {
                 nested.add(field.type.asSubclass(Message.class));
             }
         }
+        // On the module path, this module only reads the modules it requires. The generated class, defined in this module or
+        // in the module of the message (for privateLookupIn), refers to the message classes, so read their modules.
+        // No-op on the classpath, where this module is unnamed and reads all modules.
+        Module module = MessageWriterGenerator.class.getModule();
+        for (Class<?> messageClass : messageClasses) {
+            module.addReads(messageClass.getModule());
+        }
+
         ClassLoader library = MessageWriterGenerator.class.getClassLoader();
         MethodHandles.Lookup lookup;
         if (isVisible(library, messageClasses)) {

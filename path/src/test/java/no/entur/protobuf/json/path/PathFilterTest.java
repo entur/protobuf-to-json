@@ -20,19 +20,10 @@ public class PathFilterTest {
      */
 
     private static FilterType match(PathFilter filter, String... names) {
-        PathItem item = filter.getPathItem();
+        PathMatcher matcher = filter.newMatcher();
         FilterType type = null;
         for (int i = 0; i < names.length; i++) {
-            int level = i + 1;
-            item = item.constrain(level).matchPath(level, names[i]);
-            type = null;
-            if (item.hasType()) {
-                type = item.getType();
-                item = item.constrain(level);
-            }
-            if (filter.hasAnyPaths()) {
-                type = FilterType.strongest(type, filter.getAnyPathFilters().matchPath(names[i]));
-            }
+            type = matcher.matchName(i + 1, names[i]);
             if (type != null) {
                 return i == names.length - 1 ? type : null;
             }
@@ -53,6 +44,18 @@ public class PathFilterTest {
         assertEquals(FilterType.ANON, match(filter, "secret"));
         assertEquals(FilterType.PRUNE, match(filter, "c", "x", "d"));
         assertNull(match(filter, "c", "x", "e"));
+    }
+
+    @Test
+    public void matcherFollowsTheDocument() {
+        PathMatcher matcher = PathFilter.create(Collections.singletonList("$.a.b"), null).newMatcher();
+
+        assertNull(matcher.matchName(1, "a"));
+        assertNull(matcher.matchName(2, "x"));
+        assertEquals(FilterType.ANON, matcher.matchName(2, "b"));
+        assertNull(matcher.matchName(1, "b"));
+        assertNull(matcher.matchName(1, "a"));
+        assertEquals(FilterType.ANON, matcher.matchName(2, "b"));
     }
 
     @Test
