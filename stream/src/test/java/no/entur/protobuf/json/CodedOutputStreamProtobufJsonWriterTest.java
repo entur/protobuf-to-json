@@ -12,9 +12,4 @@ public class CodedOutputStreamProtobufJsonWriterTest extends AbstractProtobufJso
     protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer() {
         return writer;
     }
-
-    @Override
-    protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writerWithUnresolvedAnyValue() {
-        return CodedOutputStreamProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY).withUnresolvedAny(UnresolvedAny.VALUE).build();
-    }
 }

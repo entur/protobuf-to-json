@@ -188,7 +188,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     /**
      * What to do when a google.protobuf.Any type is not registered.
      * {@link UnresolvedAny#FAIL}, the default, matches JsonFormat: the write fails.
-     * {@link UnresolvedAny#VALUE} writes <code>{"@type": url, "value": base64}</code> instead, without parsing the payload.
+     * {@link UnresolvedAny#VALUE} writes <code>{"@type": url, "@value": base64}</code> instead, without parsing the payload;
+     * a filtering writer prunes or anonymizes the payload if a path could have matched within it.
      *
      * @param unresolvedAny behaviour, not null
      * @return this builder

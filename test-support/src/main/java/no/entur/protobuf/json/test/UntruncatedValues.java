@@ -20,6 +20,9 @@ import java.util.Set;
  * <br><br>
  * A location is a list of field names and map keys (strings) and array indexes (integers), from the root. The lite writer
  * writes unsigned map keys as signed values, so for such keys the locations with the signed key are included too.
+ * <br><br>
+ * The same walk finds the unresolved google.protobuf.Any values, <code>{"@type": url, "@value": base64}</code>, see
+ * {@linkplain #findUnresolvedAnys(String, Descriptor, JsonFormat.TypeRegistry)}.
  */
 
 public final class UntruncatedValues {
@@ -39,6 +42,7 @@ public final class UntruncatedValues {
 
     private final JsonFormat.TypeRegistry typeRegistry;
     private final Set<List<Object>> locations = new LinkedHashSet<>();
+    private final Set<List<Object>> unresolvedAnys = new LinkedHashSet<>();
 
     private UntruncatedValues(JsonFormat.TypeRegistry typeRegistry) {
         this.typeRegistry = typeRegistry;
@@ -55,6 +59,20 @@ public final class UntruncatedValues {
         UntruncatedValues values = new UntruncatedValues(typeRegistry);
         values.message(MAPPER.readTree(json), type, List.of());
         return values.locations;
+    }
+
+    /**
+     * @param json         JSON written for a message, with unresolved google.protobuf.Any values written as
+     *                     <code>{"@type": url, "@value": base64}</code>
+     * @param type         type of the message
+     * @param typeRegistry types of google.protobuf.Any values
+     * @return locations of the unresolved google.protobuf.Any objects, whose payload paths can not match within
+     */
+
+    public static Set<List<Object>> findUnresolvedAnys(String json, Descriptor type, JsonFormat.TypeRegistry typeRegistry) {
+        UntruncatedValues values = new UntruncatedValues(typeRegistry);
+        values.message(MAPPER.readTree(json), type, List.of());
+        return values.unresolvedAnys;
     }
 
     /**
@@ -175,6 +193,9 @@ public final class UntruncatedValues {
         String url = typeUrl.stringValue();
         Descriptor type = typeRegistry.find(url.substring(url.lastIndexOf('/') + 1));
         if (type == null) {
+            if (node.has("@value")) {
+                unresolvedAnys.add(location);
+            }
             return;
         }
         if (ANY_VALUE_TYPES.contains(type.getFullName())) {

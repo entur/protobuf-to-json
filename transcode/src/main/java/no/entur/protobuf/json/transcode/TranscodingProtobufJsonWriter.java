@@ -2,6 +2,7 @@ package no.entur.protobuf.json.transcode;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -30,6 +31,7 @@ import no.entur.protobuf.json.ProtobufJsonWriter;
 import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
+import no.entur.protobuf.json.plan.FilteredJsonValues;
 import no.entur.protobuf.json.plan.JsonValues;
 import no.entur.protobuf.json.plan.MessagePlan;
 import no.entur.protobuf.json.plan.MessagePlan.FieldInfo;
@@ -37,10 +39,12 @@ import no.entur.protobuf.json.plan.MessagePlan.Plans;
 import no.entur.protobuf.json.plan.ProtobufJsonWriterSupport;
 import no.entur.protobuf.json.plan.WellKnownType;
 import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.SerializableString;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -101,6 +105,10 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
 
     private static final byte[] EMPTY = new byte[0];
 
+    private static final SerializableString TYPE_NAME = FilteredJsonValues.TYPE_NAME;
+    private static final SerializableString VALUE_NAME = FilteredJsonValues.VALUE_NAME;
+    private static final SerializableString UNRESOLVED_VALUE_NAME = FilteredJsonValues.UNRESOLVED_VALUE_NAME;
+
     private final Plans plans;
     private final JsonFormat.TypeRegistry typeRegistry;
     private final UnresolvedAny unresolvedAny;
@@ -112,7 +120,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
     public TranscodingProtobufJsonWriter(Plans plans, JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
         this.plans = plans;
         this.typeRegistry = typeRegistry;
-        this.unresolvedAny = unresolvedAny;
+        this.unresolvedAny = Objects.requireNonNull(unresolvedAny, "unresolvedAny");
     }
 
     @Override
@@ -151,8 +159,8 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
         CodedInputStream input = CodedInputStream.newInstance(bytes, offset, length);
         generator.writeStartObject();
         if (typeUrl != null) {
-            generator.writeName("@type");
-            generator.writeString(typeUrl);
+            generator.writeName(TYPE_NAME);
+            JsonValues.writeString(generator, typeUrl);
         }
         writeFields(input, bytes, offset, plan, generator);
         generator.writeEndObject();
@@ -516,49 +524,59 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
 
     private void writeAny(Any any, JsonGenerator generator) throws IOException {
         String typeUrl = any.getTypeUrl();
-        if (typeUrl.isEmpty() && any.getValue().isEmpty()) {
+        ByteString value = any.getValue();
+        if (typeUrl.isEmpty() && value.isEmpty()) {
             generator.writeStartObject();
             generator.writeEndObject();
             return;
         }
-        Descriptor descriptor = findDescriptor(typeUrl);
-        byte[] content = any.getValue().toByteArray();
+        String typeName = getTypeName(typeUrl);
+        Descriptor descriptor = typeRegistry.find(typeName);
         if (descriptor == null) {
-            writeUnresolved(typeUrl, content, generator);
+            if (unresolvedAny == UnresolvedAny.FAIL) {
+                throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
+            }
+            // as the lite writer, which always knows the well-known types; JsonFormat fails if they are not registered
+            descriptor = WellKnownType.findDescriptor(typeName);
+        }
+        MessagePlan plan = descriptor != null ? plans.get(descriptor) : null;
+        byte[] content = value.toByteArray();
+        if (plan != null && plan.wellKnownType == null) {
+            writeMessage(content, 0, content.length, plan, generator, typeUrl);
             return;
         }
-        MessagePlan plan = plans.get(descriptor);
-        if (plan.wellKnownType != null) {
-            generator.writeStartObject();
-            generator.writeName("@type");
-            generator.writeString(typeUrl);
-            generator.writeName("value");
-            writeWellKnown(plan.wellKnownType, content, 0, content.length, generator);
-            generator.writeEndObject();
-        } else {
-            writeMessage(content, 0, content.length, plan, generator, typeUrl);
-        }
-    }
-
-    private void writeUnresolved(String typeUrl, byte[] content, JsonGenerator generator) {
+        // a well-known type, or an unresolved type: the type url and a value
         generator.writeStartObject();
-        generator.writeName("@type");
-        generator.writeString(typeUrl);
-        generator.writeName("value");
-        JsonValues.writeBase64(generator, content, 0, content.length);
+        generator.writeName(TYPE_NAME);
+        JsonValues.writeString(generator, typeUrl);
+        if (plan != null) {
+            generator.writeName(VALUE_NAME);
+            writeWellKnown(plan.wellKnownType, content, 0, content.length, generator);
+        } else {
+            generator.writeName(UNRESOLVED_VALUE_NAME);
+            JsonValues.writeBase64(generator, content, 0, content.length);
+        }
         generator.writeEndObject();
     }
 
-    private Descriptor findDescriptor(String typeUrl) throws InvalidProtocolBufferException {
-        // same as JsonFormat
-        int index = typeUrl.lastIndexOf('/');
+    /**
+     * Type name of a type url, the same as JsonFormat: the last part, ignoring trailing slashes.
+     *
+     * @param typeUrl type url, i.e. type.googleapis.com/google.protobuf.Duration
+     * @return type name, i.e. google.protobuf.Duration
+     * @throws InvalidProtocolBufferException if the type url has no slash, other than trailing slashes
+     */
+
+    static String getTypeName(String typeUrl) throws InvalidProtocolBufferException {
+        // JsonFormat splits on slashes, which drops trailing empty parts
+        int end = typeUrl.length();
+        while (end > 0 && typeUrl.charAt(end - 1) == '/') {
+            end--;
+        }
+        int index = typeUrl.lastIndexOf('/', end - 1);
         if (index == -1) {
             throw new InvalidProtocolBufferException("Invalid type url found: " + typeUrl);
         }
-        Descriptor descriptor = typeRegistry.find(typeUrl.substring(index + 1));
-        if (descriptor == null && unresolvedAny != UnresolvedAny.VALUE) {
-            throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
-        }
-        return descriptor;
+        return typeUrl.substring(index + 1, end);
     }
 }

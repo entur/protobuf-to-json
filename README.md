@@ -60,8 +60,8 @@ public protobuf APIs and runs on Java 17, but is the slowest of the three.
 * NaN and infinity `google.protobuf.Value` numbers are written as strings, rather than failing
 * escaping is left to the generator, so i.e. `=` and `<` are not written as unicode escapes
 * an unregistered `google.protobuf.Any` fails the write, as JsonFormat does, unless
-  `withUnresolvedAny(UnresolvedAny.VALUE)` is set. That writes `{"@type": url, "value": base64}` and does not parse
-  the payload. A type URL without a `/` still fails. An empty Any is still `{}`
+  `withUnresolvedAny(UnresolvedAny.VALUE)` is set. That writes `{"@type": url, "@value": base64}` and does not parse
+  the payload, see [Unresolved Any](#unresolved-any). A type URL without a `/` still fails. An empty Any is still `{}`
 
 No JSON key is written twice:
 
@@ -122,7 +122,7 @@ from JsonFormat:
  * extensions are not written
  * as for the full protobuf writers: out of range `Timestamp`/`Duration` values are written as objects, NaN `Value`
    numbers as strings, and escaping is left to the generator. An unregistered `google.protobuf.Any` fails the write
-   unless `withUnresolvedAny(UnresolvedAny.VALUE)` is set, which writes `{"@type": url, "value": base64}`
+   unless `withUnresolvedAny(UnresolvedAny.VALUE)` is set, which writes `{"@type": url, "@value": base64}`
 
 `writeAsString` writes characters, so max size then counts characters. Jackson 2 generators which write UTF-8 escape
 surrogate pairs (i.e. emojis) as `\uXXXX\uXXXX` unless `COMBINE_UNICODE_SURROGATES_IN_UTF8` is enabled; max size takes this
@@ -192,6 +192,21 @@ JSON.
 
 A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.
+
+### Unresolved Any
+With `withUnresolvedAny(UnresolvedAny.VALUE)`, a `google.protobuf.Any` whose type is not registered is written as
+`{"@type": url, "@value": base64}`, without parsing the payload. No protobuf JSON field is named `@value`, so a parser
+rejects it rather than reading the payload as a field. The well-known types are always resolved, also by the full
+protobuf writers when they are not in the type registry.
+
+Paths match `@type` and `@value` as usual, and max string length applies to both. Paths cannot match within the payload,
+so it is pruned (if such a path prunes) or anonymized if a path could have matched within it:
+
+ * any-paths, including anonymize and prune keys
+ * absolute paths which go on into the Any, other than through `@type` or `@value`: for an Any at `$.event.payload`,
+   `$.event.payload.password` and `$.event.*.password`, but not `$.event.payload.@type`
+
+A path below a field which a shorter absolute path filters as a whole does not count.
 
 ## Performance
 By message size as JSON, without filtering; the best value of each column in **bold**. See [PERFORMANCE.md](PERFORMANCE.md)

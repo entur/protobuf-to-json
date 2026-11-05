@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.ByteArrayOutputStream;
+import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,8 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public abstract class AbstractProtobufJsonWriterTest {
 
     protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer();
-
-    protected abstract ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writerWithUnresolvedAnyValue();
 
     protected static int number(String name) {
         return TestAllTypesProto2.getDescriptor().findFieldByName(name).getNumber();
@@ -161,32 +160,17 @@ public abstract class AbstractProtobufJsonWriterTest {
     }
 
     @Test
-    public void unresolvedAnyWritesTypeAndBase64() throws Exception {
-        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = writerWithUnresolvedAnyValue();
-        byte[] payload = new byte[]{0, 1, 2, (byte) 0xff};
-        Any unknown = Any.newBuilder()
-                .setTypeUrl("type.googleapis.com/unknown.Type")
-                .setValue(ByteString.copyFrom(payload))
-                .build();
+    public void typeUrlLikeJsonFormat() throws Exception {
+        // JsonFormat ignores trailing slashes
+        Any any = Any.pack(TestAllTypesProto3.newBuilder().setOptionalInt32(1).build());
+        assertSameAsJsonFormat(TestAllTypesProto3.newBuilder().setOptionalAny(any.toBuilder().setTypeUrl(any.getTypeUrl() + "/")).build());
+        assertSameAsJsonFormat(Any.pack(Duration.newBuilder().setSeconds(1).build()).toBuilder().setTypeUrl("/google.protobuf.Duration//").build());
 
-        String expected = "{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}";
-        assertThat(TestSupport.writeBytes(writer, unknown)).isEqualTo(expected);
-        assertThat(TestSupport.writeChars(writer, unknown)).isEqualTo(expected);
-        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(unknown).build()))
-                .isEqualTo("{\"optionalAny\":" + expected + "}");
-
-        Any emptyValue = Any.newBuilder().setTypeUrl("type.googleapis.com/unknown.Type").build();
-        assertThat(TestSupport.writeBytes(writer, emptyValue)).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"\"}");
-        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(Any.getDefaultInstance()).build()))
-                .isEqualTo("{\"optionalAny\":{}}");
-
-        Any duration = Any.pack(Duration.newBuilder().setSeconds(1).build());
-        assertThat(TestSupport.writeBytes(writer, TestAllTypesProto3.newBuilder().setOptionalAny(duration).build()))
-                .isEqualTo("{\"optionalAny\":{\"@type\":\"" + duration.getTypeUrl() + "\",\"value\":\"1s\"}}");
-
-        Any invalid = Any.newBuilder().setTypeUrl("invalid").setValue(ByteString.copyFrom(new byte[]{1})).build();
-        InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer, invalid));
-        assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: invalid");
+        for (String invalid : List.of("invalid", "type.googleapis.com/", "/", "")) {
+            Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
+            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer(), value));
+            assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
+        }
     }
 
     @Test

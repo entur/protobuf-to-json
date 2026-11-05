@@ -2,6 +2,7 @@ package no.entur.protobuf.json.transcode;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -45,6 +46,7 @@ import tools.jackson.core.io.SerializedString;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -86,7 +88,7 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
         this.plans = plans;
         this.typeRegistry = typeRegistry;
         this.filter = filter;
-        this.unresolvedAny = unresolvedAny;
+        this.unresolvedAny = Objects.requireNonNull(unresolvedAny, "unresolvedAny");
     }
 
     public JsonFilter getFilter() {
@@ -693,69 +695,56 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
 
     private boolean writeAny(Any any, FilteredJsonValues values, SerializableString name, int nameSize, boolean anonymize) throws IOException {
         String typeUrl = any.getTypeUrl();
-        if (typeUrl.isEmpty() && any.getValue().isEmpty()) {
+        ByteString value = any.getValue();
+        if (typeUrl.isEmpty() && value.isEmpty()) {
             if (!values.startObject(name, nameSize)) {
                 return false;
             }
             values.endObject();
             return true;
         }
-        Descriptor descriptor = findDescriptor(typeUrl);
-        byte[] content = any.getValue().toByteArray();
+        String typeName = TranscodingProtobufJsonWriter.getTypeName(typeUrl);
+        Descriptor descriptor = typeRegistry.find(typeName);
         if (descriptor == null) {
-            return writeUnresolved(typeUrl, content, values, name, nameSize, anonymize);
-        }
-        MessagePlan plan = plans.get(descriptor);
-        if (plan.wellKnownType != null) {
-            if (!values.startObject(name, nameSize)) {
-                return false;
+            if (unresolvedAny == UnresolvedAny.FAIL) {
+                throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
             }
-            boolean writing = writeTypeUrl(values, typeUrl, anonymize);
-            if (writing) {
-                FilterType type = anonymize ? FilterType.ANON : values.match(FilteredJsonValues.VALUE_NAME);
-                int valueNameSize = values.getNameSize(FilteredJsonValues.VALUE_NAME);
-                if (type == FilterType.PRUNE) {
-                    writing = values.writePruned(FilteredJsonValues.VALUE_NAME, valueNameSize);
-                } else {
-                    writing = writeWellKnown(plan.wellKnownType, content, 0, content.length, values, FilteredJsonValues.VALUE_NAME, valueNameSize, type == FilterType.ANON);
-                }
-            }
-            values.endObject();
-            return writing;
+            // as the lite writer, which always knows the well-known types; JsonFormat fails if they are not registered
+            descriptor = WellKnownType.findDescriptor(typeName);
         }
-        return writeMessage(content, 0, content.length, plan, values, typeUrl, name, nameSize, anonymize);
-    }
-
-    private boolean writeUnresolved(String typeUrl, byte[] content, FilteredJsonValues values, SerializableString name, int nameSize, boolean anonymize) {
+        MessagePlan plan = descriptor != null ? plans.get(descriptor) : null;
+        if (plan != null && plan.wellKnownType == null) {
+            byte[] content = value.toByteArray();
+            return writeMessage(content, 0, content.length, plan, values, typeUrl, name, nameSize, anonymize);
+        }
+        // a well-known type, or an unresolved type: the type url and a value
         if (!values.startObject(name, nameSize)) {
             return false;
         }
+        // paths can not match within an unresolved payload, so it is filtered if one could
+        FilterType opaque = plan == null && !anonymize ? values.matchUnresolvedAny() : null;
         boolean writing = writeTypeUrl(values, typeUrl, anonymize);
         if (writing) {
-            FilterType type = anonymize ? FilterType.ANON : values.match(FilteredJsonValues.VALUE_NAME);
-            int valueNameSize = values.getNameSize(FilteredJsonValues.VALUE_NAME);
-            if (type == FilterType.PRUNE) {
-                writing = values.writePruned(FilteredJsonValues.VALUE_NAME, valueNameSize);
-            } else if (type == FilterType.ANON) {
-                writing = values.writeAnonymized(FilteredJsonValues.VALUE_NAME, valueNameSize);
+            SerializableString valueName = plan != null ? FilteredJsonValues.VALUE_NAME : FilteredJsonValues.UNRESOLVED_VALUE_NAME;
+            FilterType type = anonymize ? FilterType.ANON : values.match(valueName);
+            int valueNameSize = values.getNameSize(valueName);
+            if (plan == null) {
+                type = FilterType.strongest(type, opaque);
+                if (type != null) {
+                    writing = values.writeFiltered(valueName, valueNameSize, type);
+                } else {
+                    byte[] content = value.toByteArray();
+                    writing = values.writeBase64(valueName, valueNameSize, content, 0, content.length);
+                }
+            } else if (type == FilterType.PRUNE) {
+                writing = values.writePruned(valueName, valueNameSize);
             } else {
-                writing = values.writeBase64(FilteredJsonValues.VALUE_NAME, valueNameSize, content, 0, content.length);
+                // anonymized well-known values keep their structure
+                byte[] content = value.toByteArray();
+                writing = writeWellKnown(plan.wellKnownType, content, 0, content.length, values, valueName, valueNameSize, type == FilterType.ANON);
             }
         }
         values.endObject();
         return writing;
-    }
-
-    private Descriptor findDescriptor(String typeUrl) throws InvalidProtocolBufferException {
-        // same as JsonFormat
-        int index = typeUrl.lastIndexOf('/');
-        if (index == -1) {
-            throw new InvalidProtocolBufferException("Invalid type url found: " + typeUrl);
-        }
-        Descriptor descriptor = typeRegistry.find(typeUrl.substring(index + 1));
-        if (descriptor == null && unresolvedAny != UnresolvedAny.VALUE) {
-            throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
-        }
-        return descriptor;
     }
 }

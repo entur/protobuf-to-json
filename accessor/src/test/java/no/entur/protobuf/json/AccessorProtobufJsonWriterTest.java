@@ -12,9 +12,4 @@ public class AccessorProtobufJsonWriterTest extends AbstractProtobufJsonWriterTe
     protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer() {
         return writer;
     }
-
-    @Override
-    protected ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writerWithUnresolvedAnyValue() {
-        return AccessorProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY).withUnresolvedAny(UnresolvedAny.VALUE).build();
-    }
 }

@@ -166,19 +166,24 @@ final class LiteJsonValues {
     // ---- any ----
 
     /**
-     * Type name of a type url, like JsonFormat.
+     * Type name of a type url, like JsonFormat: the last part, ignoring trailing slashes.
      *
      * @param typeUrl type url, i.e. type.googleapis.com/google.protobuf.Duration
      * @return type name, i.e. google.protobuf.Duration
-     * @throws InvalidProtocolBufferException if the type url is not valid
+     * @throws InvalidProtocolBufferException if the type url has no slash, other than trailing slashes
      */
 
     static String getTypeName(String typeUrl) throws InvalidProtocolBufferException {
-        int index = typeUrl.lastIndexOf('/');
+        // JsonFormat splits on slashes, which drops trailing empty parts
+        int end = typeUrl.length();
+        while (end > 0 && typeUrl.charAt(end - 1) == '/') {
+            end--;
+        }
+        int index = typeUrl.lastIndexOf('/', end - 1);
         if (index == -1) {
             throw new InvalidProtocolBufferException("Invalid type url found: " + typeUrl);
         }
-        return typeUrl.substring(index + 1);
+        return typeUrl.substring(index + 1, end);
     }
 
     static MessageLite parse(MessageLite prototype, ByteString value) throws InvalidProtocolBufferException {

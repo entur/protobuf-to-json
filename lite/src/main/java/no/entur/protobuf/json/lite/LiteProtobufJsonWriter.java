@@ -34,6 +34,7 @@ import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Writes protobuf lite messages as JSON, like JsonFormat does for full protobuf messages
@@ -62,6 +63,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
 
     static final String TYPE_NAME = "@type";
     static final String VALUE_NAME = "value";
+    static final String UNRESOLVED_VALUE_NAME = "@value";
 
     public static Builder newBuilder() {
         return new Builder();
@@ -114,7 +116,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
 
     protected LiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, UnresolvedAny unresolvedAny) {
         this.anyTypes = anyTypes;
-        this.unresolvedAny = unresolvedAny;
+        this.unresolvedAny = Objects.requireNonNull(unresolvedAny, "unresolvedAny");
     }
 
     @Override
@@ -461,43 +463,44 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
             generator.writeEndObject();
             return;
         }
-        MessageLite prototype = findType(typeUrl);
-        if (prototype == null) {
-            generator.writeStartObject();
-            generator.writeFieldName(TYPE_NAME);
-            generator.writeString(typeUrl);
-            generator.writeFieldName(VALUE_NAME);
-            LiteJsonValues.writeBase64(generator, any.getValue());
-            generator.writeEndObject();
-            return;
-        }
-        MessageLite content = LiteJsonValues.parse(prototype, any.getValue());
-        LiteMessagePlan plan = plans.get(content.getClass());
-        if (plan.wellKnownType != null) {
-            generator.writeStartObject();
-            generator.writeFieldName(TYPE_NAME);
-            generator.writeString(typeUrl);
-            generator.writeFieldName(VALUE_NAME);
-            writeWellKnown(plan.wellKnownType, content, generator, utf8);
-            generator.writeEndObject();
-        } else {
-            writeMessage(content, plan, generator, utf8, typeUrl);
-        }
-    }
-
-    private MessageLite findType(String typeUrl) throws InvalidProtocolBufferException {
-        return findType(anyTypes, typeUrl, unresolvedAny);
-    }
-
-    static MessageLite findType(Map<String, MessageLite> anyTypes, String typeUrl) throws InvalidProtocolBufferException {
-        return findType(anyTypes, typeUrl, UnresolvedAny.FAIL);
-    }
-
-    static MessageLite findType(Map<String, MessageLite> anyTypes, String typeUrl, UnresolvedAny unresolvedAny) throws InvalidProtocolBufferException {
-        MessageLite prototype = anyTypes.get(LiteJsonValues.getTypeName(typeUrl));
-        if (prototype == null && unresolvedAny != UnresolvedAny.VALUE) {
+        MessageLite prototype = findType(anyTypes, typeUrl);
+        if (prototype == null && unresolvedAny == UnresolvedAny.FAIL) {
             throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
         }
-        return prototype;
+        MessageLite content = null;
+        LiteMessagePlan plan = null;
+        if (prototype != null) {
+            content = LiteJsonValues.parse(prototype, any.getValue());
+            plan = plans.get(content.getClass());
+            if (plan.wellKnownType == null) {
+                writeMessage(content, plan, generator, utf8, typeUrl);
+                return;
+            }
+        }
+        // a well-known type, or an unresolved type: the type url and a value
+        generator.writeStartObject();
+        generator.writeFieldName(TYPE_NAME);
+        generator.writeString(typeUrl);
+        if (plan != null) {
+            generator.writeFieldName(VALUE_NAME);
+            writeWellKnown(plan.wellKnownType, content, generator, utf8);
+        } else {
+            generator.writeFieldName(UNRESOLVED_VALUE_NAME);
+            LiteJsonValues.writeBase64(generator, any.getValue());
+        }
+        generator.writeEndObject();
+    }
+
+    /**
+     * Find the type of a google.protobuf.Any.
+     *
+     * @param anyTypes registered types, by type name
+     * @param typeUrl  type url
+     * @return a message of the type, or null if it is not registered
+     * @throws InvalidProtocolBufferException if the type url is not valid
+     */
+
+    static MessageLite findType(Map<String, MessageLite> anyTypes, String typeUrl) throws InvalidProtocolBufferException {
+        return anyTypes.get(LiteJsonValues.getTypeName(typeUrl));
     }
 }

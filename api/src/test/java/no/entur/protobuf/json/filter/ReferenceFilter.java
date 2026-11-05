@@ -38,6 +38,11 @@ import tools.jackson.core.json.JsonFactory;
  *     escaped truncate message plus the number of digits. Strings which are not text (64-bit integers, enum names, timestamps,
  *     durations, and NaN and infinity) are never truncated; the JSON does not tell them apart, so their locations are given
  *     (lists of field names, map keys and array indexes, from the root).</li>
+ *     <li>Unresolved google.protobuf.Any values, <code>{"@type": url, "@value": base64}</code>: paths can not match within
+ *     the payload, so {@code @value} is also pruned or anonymized if a path could have matched within the payload, had it
+ *     been resolved: any any-path, and any absolute path which goes on into the Any other than through {@code @type} or
+ *     {@code @value}, where a path counts with the type of the first absolute path which matches on the way (a shorter
+ *     path filters the whole value). The JSON does not tell these objects apart, so their locations are given.</li>
  *     <li>Max size: tokens are written in order while they fit. A field name is written only together with its value, and
  *     each open object or array reserves room for its closing bracket. At the first token which does not fit, writing stops,
  *     and only the closing brackets of the open objects and arrays are written. The root object or array, or a root scalar,
@@ -163,6 +168,11 @@ public final class ReferenceFilter {
         ANONYMIZE, PRUNE
     }
 
+    private static final String TYPE = "@type";
+    private static final String UNRESOLVED_VALUE = "@value";
+    // a field name which only a wildcard matches
+    private static final String WILDCARD_ONLY_NAME = "\u0000";
+
     private final List<String[]> anonymizePaths = new ArrayList<>();
     private final Set<String> anonymizeAnyPaths = new HashSet<>();
     private final List<String[]> prunePaths = new ArrayList<>();
@@ -235,7 +245,21 @@ public final class ReferenceFilter {
      */
 
     public String process(String json, Output output, Set<List<Object>> untruncated) {
-        return output.write(filter(json, output, untruncated));
+        return process(json, output, untruncated, Set.of());
+    }
+
+    /**
+     * Filter a document.
+     *
+     * @param json        document
+     * @param output      output, for measuring tokens
+     * @param untruncated locations of strings which are not text, and so are never truncated
+     * @param unresolved  locations of unresolved google.protobuf.Any objects, whose payload can not be filtered by paths
+     * @return the filtered document, written to the output
+     */
+
+    public String process(String json, Output output, Set<List<Object>> untruncated, Set<List<Object>> unresolved) {
+        return output.write(filter(json, output, untruncated, unresolved));
     }
 
     /**
@@ -248,12 +272,26 @@ public final class ReferenceFilter {
      */
 
     public List<Token> filter(String json, Output output, Set<List<Object>> untruncated) {
+        return filter(json, output, untruncated, Set.of());
+    }
+
+    /**
+     * Filter a document.
+     *
+     * @param json        document
+     * @param output      output, for measuring tokens
+     * @param untruncated locations of strings which are not text, and so are never truncated
+     * @param unresolved  locations of unresolved google.protobuf.Any objects, whose payload can not be filtered by paths
+     * @return the tokens of the filtered document
+     */
+
+    public List<Token> filter(String json, Output output, Set<List<Object>> untruncated, Set<List<Object>> unresolved) {
         Object tree;
         try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), json)) {
             tree = parse(parser, parser.nextToken());
         }
         List<Token> tokens = new ArrayList<>();
-        addTokens(null, filter(tree, new ArrayList<>(), new ArrayList<>(), untruncated), tokens);
+        addTokens(null, filter(tree, new ArrayList<>(), new ArrayList<>(), untruncated, unresolved), tokens);
         if (maxSize == -1) {
             return tokens;
         }
@@ -293,21 +331,26 @@ public final class ReferenceFilter {
 
     // paths and max string length
 
-    private Object filter(Object value, List<String> path, List<Object> location, Set<List<Object>> untruncated) {
+    private Object filter(Object value, List<String> path, List<Object> location, Set<List<Object>> untruncated, Set<List<Object>> unresolved) {
         if (value instanceof ObjectValue object) {
+            // the payload of an unresolved Any is filtered if a path could have matched within it
+            Type payload = unresolved.contains(location) ? matchWithin(path) : null;
             List<Field> fields = new ArrayList<>();
             for (Field field : object.fields()) {
                 List<String> fieldPath = new ArrayList<>(path);
                 fieldPath.add(field.name());
 
                 Type type = match(fieldPath);
+                if (field.name().equals(UNRESOLVED_VALUE)) {
+                    type = strongest(type, payload);
+                }
                 Object filtered;
                 if (type == Type.PRUNE) {
                     filtered = new RawValue(pruneRawJsonValue);
                 } else if (type == Type.ANONYMIZE) {
                     filtered = anonymize(field.value());
                 } else {
-                    filtered = filter(field.value(), fieldPath, append(location, field.name()), untruncated);
+                    filtered = filter(field.value(), fieldPath, append(location, field.name()), untruncated, unresolved);
                 }
                 fields.add(new Field(field.name(), filtered));
             }
@@ -317,7 +360,7 @@ public final class ReferenceFilter {
             List<Object> elements = new ArrayList<>();
             for (int i = 0; i < array.elements().size(); i++) {
                 // arrays are transparent for paths
-                elements.add(filter(array.elements().get(i), path, append(location, i), untruncated));
+                elements.add(filter(array.elements().get(i), path, append(location, i), untruncated, unresolved));
             }
             return new ArrayValue(elements);
         }
@@ -339,6 +382,74 @@ public final class ReferenceFilter {
             return Type.PRUNE;
         }
         if (anonymizeAnyPaths.contains(name) || matches(anonymizePaths, path)) {
+            return Type.ANONYMIZE;
+        }
+        return null;
+    }
+
+    private static Type strongest(Type a, Type b) {
+        if (a == Type.PRUNE || b == Type.PRUNE) {
+            return Type.PRUNE;
+        }
+        if (a == Type.ANONYMIZE || b == Type.ANONYMIZE) {
+            return Type.ANONYMIZE;
+        }
+        return null;
+    }
+
+    /**
+     * The type of the paths which could have matched within the payload of an unresolved Any at the given path, had it been
+     * resolved: then its fields would have been in the object, next to {@code @type}.
+     */
+
+    private Type matchWithin(List<String> path) {
+        Type type = null;
+        if (!pruneAnyPaths.isEmpty()) {
+            type = Type.PRUNE;
+        } else if (!anonymizeAnyPaths.isEmpty()) {
+            type = Type.ANONYMIZE;
+        }
+        for (String[] expression : prunePaths) {
+            type = strongest(type, matchWithin(expression, path));
+        }
+        for (String[] expression : anonymizePaths) {
+            type = strongest(type, matchWithin(expression, path));
+        }
+        return type;
+    }
+
+    /**
+     * Follow an absolute path into the payload of an unresolved Any: the type of the first absolute path which matches on
+     * the way, as that filters the whole value, or null if the path does not go on into the payload. A wildcard is followed
+     * with a name which no other path names, as that is matched by the fewest paths.
+     */
+
+    private Type matchWithin(String[] expression, List<String> path) {
+        int level = path.size();
+        if (expression.length <= level || expression[level].equals(TYPE) || expression[level].equals(UNRESOLVED_VALUE)) {
+            return null;
+        }
+        for (int i = 0; i < level; i++) {
+            if (!expression[i].equals("*") && !expression[i].equals(path.get(i))) {
+                return null;
+            }
+        }
+        List<String> fieldPath = new ArrayList<>(path);
+        for (int i = level; i < expression.length; i++) {
+            fieldPath.add(expression[i].equals("*") ? WILDCARD_ONLY_NAME : expression[i]);
+            Type type = matchAbsolute(fieldPath);
+            if (type != null) {
+                return type;
+            }
+        }
+        throw new IllegalStateException("Expected " + String.join(".", expression) + " to match " + fieldPath);
+    }
+
+    private Type matchAbsolute(List<String> path) {
+        if (matches(prunePaths, path)) {
+            return Type.PRUNE;
+        }
+        if (matches(anonymizePaths, path)) {
             return Type.ANONYMIZE;
         }
         return null;

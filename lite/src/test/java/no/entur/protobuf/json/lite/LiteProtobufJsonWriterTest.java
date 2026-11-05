@@ -249,23 +249,43 @@ public class LiteProtobufJsonWriterTest {
     public void unresolvedAnyWritesTypeAndBase64() throws Exception {
         ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> valueWriter = LiteTestSupport.newBuilder().withUnresolvedAny(UnresolvedAny.VALUE).build();
         Any unknown = Any.newBuilder().setTypeUrl("type.googleapis.com/unknown.Type").setValue(ByteString.copyFrom(new byte[]{0, 1, 2, (byte) 0xff})).build();
-        String expected = "{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"AAEC/w==\"}";
+        String expected = "{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"AAEC/w==\"}";
         assertThat(LiteTestSupport.writeChars(valueWriter, unknown)).isEqualTo(expected);
         assertThat(LiteTestSupport.writeBytes(valueWriter, unknown, true)).isEqualTo(expected);
         assertThat(LiteTestSupport.writeChars(valueWriter, TestAllTypesProto3.newBuilder().setOptionalAny(unknown).build()))
                 .isEqualTo("{\"optionalAny\":" + expected + "}");
 
         Any emptyValue = Any.newBuilder().setTypeUrl("type.googleapis.com/unknown.Type").build();
-        assertThat(LiteTestSupport.writeChars(valueWriter, emptyValue)).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"value\":\"\"}");
+        assertThat(LiteTestSupport.writeChars(valueWriter, emptyValue)).isEqualTo("{\"@type\":\"type.googleapis.com/unknown.Type\",\"@value\":\"\"}");
         assertThat(LiteTestSupport.writeChars(valueWriter, TestAllTypesProto3.newBuilder().setOptionalAny(Any.getDefaultInstance()).build()))
                 .isEqualTo("{\"optionalAny\":{}}");
 
         Any duration = Any.newBuilder().setTypeUrl("type.googleapis.com/google.protobuf.Duration").setValue(Duration.newBuilder().setSeconds(1).build().toByteString()).build();
         assertThat(LiteTestSupport.writeChars(valueWriter, duration)).isEqualTo("{\"@type\":\"type.googleapis.com/google.protobuf.Duration\",\"value\":\"1s\"}");
 
-        Any invalid = Any.newBuilder().setTypeUrl("invalid").setValue(ByteString.copyFrom(new byte[]{1})).build();
-        InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(valueWriter, invalid));
-        assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: invalid");
+        for (String invalid : Arrays.asList("invalid", "type.googleapis.com/", "/")) {
+            Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
+            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(valueWriter, value));
+            assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
+        }
+    }
+
+    @Test
+    public void typeUrlLikeJsonFormat() throws Exception {
+        // JsonFormat ignores trailing slashes
+        Any duration = Any.newBuilder().setTypeUrl("/google.protobuf.Duration//").setValue(Duration.newBuilder().setSeconds(1).build().toByteString()).build();
+        assertThat(write(duration)).isEqualTo("{\"@type\":\"/google.protobuf.Duration//\",\"value\":\"1s\"}");
+        Any message = Any.newBuilder()
+                .setTypeUrl(LiteTestSupport.TEST_ALL_TYPES_PROTO3_URL + "/")
+                .setValue(TestAllTypesProto3.newBuilder().setOptionalInt32(1).build().toByteString())
+                .build();
+        assertThat(write(message)).isEqualTo("{\"@type\":\"" + LiteTestSupport.TEST_ALL_TYPES_PROTO3_URL + "/\",\"optionalInt32\":1}");
+
+        for (String invalid : Arrays.asList("type.googleapis.com/", "/", "")) {
+            Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
+            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(writer, value));
+            assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
+        }
     }
 
     @Test
