@@ -35,6 +35,8 @@ import no.entur.protobuf.json.UnresolvedAny;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -237,12 +239,33 @@ public class LiteProtobufJsonWriterTest {
         assertThat(write(TestAllTypesProto3.newBuilder().setOptionalAny(Any.getDefaultInstance()).build())).isEqualTo("{\"optionalAny\":{}}");
 
         TestAllTypesProto3 unknown = TestAllTypesProto3.newBuilder().setOptionalAny(Any.newBuilder().setTypeUrl("type.googleapis.com/unknown.Type")).build();
-        InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(writer, unknown));
+        InvalidProtocolBufferException e = LiteTestSupport.assertInvalidProtocolBuffer(() -> LiteTestSupport.writeChars(writer, unknown));
         assertThat(e).hasMessageThat().isEqualTo("Cannot find type for url: type.googleapis.com/unknown.Type");
 
         TestAllTypesProto3 invalid = TestAllTypesProto3.newBuilder().setOptionalAny(Any.newBuilder().setTypeUrl("invalid")).build();
-        e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(writer, invalid));
+        e = LiteTestSupport.assertInvalidProtocolBuffer(() -> LiteTestSupport.writeChars(writer, invalid));
         assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: invalid");
+    }
+
+    @Test
+    public void generatorFailuresAreWrapped() throws IOException {
+        // Jackson 2 generators report I/O failures with IOException
+        OutputStream failing = new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("failing");
+            }
+        };
+        // larger than the buffer of the generator
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < 100_000; i++) {
+            text.append('x');
+        }
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalString(text.toString()).build();
+        JsonGenerator generator = LiteTestSupport.FACTORY.createGenerator(failing);
+
+        UncheckedIOException e = assertThrows(UncheckedIOException.class, () -> writer.write(message, generator));
+        assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("failing");
     }
 
     @Test
@@ -265,7 +288,7 @@ public class LiteProtobufJsonWriterTest {
 
         for (String invalid : Arrays.asList("invalid", "type.googleapis.com/", "/")) {
             Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
-            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(valueWriter, value));
+            InvalidProtocolBufferException e = LiteTestSupport.assertInvalidProtocolBuffer(() -> LiteTestSupport.writeChars(valueWriter, value));
             assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
         }
     }
@@ -283,7 +306,7 @@ public class LiteProtobufJsonWriterTest {
 
         for (String invalid : Arrays.asList("type.googleapis.com/", "/", "")) {
             Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
-            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> LiteTestSupport.writeChars(writer, value));
+            InvalidProtocolBufferException e = LiteTestSupport.assertInvalidProtocolBuffer(() -> LiteTestSupport.writeChars(writer, value));
             assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
         }
     }

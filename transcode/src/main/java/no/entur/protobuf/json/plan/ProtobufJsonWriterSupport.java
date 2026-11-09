@@ -8,7 +8,6 @@ import tools.jackson.core.ObjectWriteContext;
 import tools.jackson.core.json.JsonFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -28,10 +27,9 @@ public final class ProtobufJsonWriterSupport {
      * @param writer  writer
      * @param message message or builder
      * @return JSON
-     * @throws IOException if writing fails
      */
 
-    public static String writeAsString(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) throws IOException {
+    public static String writeAsString(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) {
         int size = message instanceof MessageLite messageLite ? messageLite.getSerializedSize() * 2 : 256;
         ByteArrayOutputStream output = new ByteArrayOutputStream(Math.max(size, 32));
         try (JsonGenerator generator = JSON_FACTORY.createGenerator(ObjectWriteContext.empty(), output)) {

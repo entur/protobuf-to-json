@@ -15,6 +15,7 @@ import tools.jackson.core.ObjectWriteContext;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -199,8 +200,8 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
                         }
                     }
                 }
-            } catch (IOException e) {
-                throw new IllegalArgumentException("Unable to write a warmup message", e);
+            } catch (UncheckedIOException e) {
+                throw new IllegalArgumentException("Unable to write a warmup message", e.getCause());
             }
         }
     }
@@ -217,19 +218,23 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        MessageWriters.getWriter(m.getClass()).write(generator, null, m, this);
+        try {
+            MessageWriters.getWriter(m.getClass()).write(generator, null, m, this);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         return true;
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 }

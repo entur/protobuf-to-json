@@ -7,6 +7,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.jsonformat.JsonFormatComparison;
 import no.entur.protobuf.json.test.RandomMessages;
+import org.junit.jupiter.api.function.Executable;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.core.StreamWriteFeature;
@@ -14,8 +15,11 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -33,6 +37,19 @@ public final class TestSupport {
     public static final JsonFormat.TypeRegistry TYPE_REGISTRY = RandomMessages.createTypeRegistry();
 
     private TestSupport() {
+    }
+
+    /**
+     * Assert that a write fails because of the content of a message, for example an unresolved google.protobuf.Any: the
+     * writers throw an {@linkplain UncheckedIOException} with an {@linkplain InvalidProtocolBufferException} as cause.
+     *
+     * @return the cause
+     */
+
+    public static InvalidProtocolBufferException assertInvalidProtocolBuffer(Executable write) {
+        UncheckedIOException e = assertThrows(UncheckedIOException.class, write);
+        assertThat(e).hasCauseThat().isInstanceOf(InvalidProtocolBufferException.class);
+        return (InvalidProtocolBufferException) e.getCause();
     }
 
     /**

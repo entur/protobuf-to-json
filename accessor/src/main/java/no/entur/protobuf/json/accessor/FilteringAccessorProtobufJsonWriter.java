@@ -13,6 +13,7 @@ import no.entur.protobuf.json.transcode.FilteringTranscodingProtobufJsonWriter;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * {@linkplain AccessorProtobufJsonWriter} with filtering (anonymize and prune paths, max string length and max size).
@@ -40,7 +41,7 @@ public class FilteringAccessorProtobufJsonWriter implements ProtobufJsonWriter<M
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
@@ -48,12 +49,16 @@ public class FilteringAccessorProtobufJsonWriter implements ProtobufJsonWriter<M
             m = ((Message.Builder) message).buildPartial();
         }
         FilteredJsonValues values = new FilteredJsonValues(filter, generator);
-        MessageWriters.getFilteringWriter(m.getClass()).write(values, null, 0, m, false, this);
+        try {
+            MessageWriters.getFilteringWriter(m.getClass()).write(values, null, 0, m, false, this);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         return !values.isStopped();
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 }

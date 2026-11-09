@@ -91,7 +91,7 @@ public abstract class AbstractProtobufJacksonConformanceTest {
         // MessageMarshallerIncrementalTest: types must be registered. Here, like for JsonFormat, only the types of google.protobuf.Any values
         TestAny message = TestAny.newBuilder().setAnyValue(Any.pack(SearchResponse.newBuilder().setTotalCount(10).build())).build();
 
-        assertThrows(IOException.class, () -> writer().writeAsString(message));
+        TestSupport.assertInvalidProtocolBuffer(() -> writer().writeAsString(message));
     }
 
     @Test

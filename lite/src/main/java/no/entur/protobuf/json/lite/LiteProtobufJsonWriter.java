@@ -31,6 +31,7 @@ import no.entur.protobuf.json.filter.JsonTimes;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,28 +122,34 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
     }
 
     @Override
-    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) {
         MessageLite m = toMessage(message);
         LiteMessagePlan plan = plans.get(m.getClass());
         boolean utf8 = LiteJsonValues.isUtf8(generator);
-        if (plan.wellKnownType != null) {
-            writeWellKnown(plan.wellKnownType, m, generator, utf8);
-        } else {
-            writeMessage(m, plan, generator, utf8, null);
+        try {
+            if (plan.wellKnownType != null) {
+                writeWellKnown(plan.wellKnownType, m, generator, utf8);
+            } else {
+                writeMessage(m, plan, generator, utf8, null);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return true;
     }
 
     @Override
-    public String writeAsString(MessageLiteOrBuilder message) throws IOException {
+    public String writeAsString(MessageLiteOrBuilder message) {
         return writeAsString(this, message);
     }
 
-    static String writeAsString(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message) throws IOException {
+    static String writeAsString(ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer, MessageLiteOrBuilder message) {
         int size = message instanceof MessageLite ? ((MessageLite) message).getSerializedSize() * 2 : 256;
         StringWriter output = new StringWriter(Math.max(size, 32));
         try (JsonGenerator generator = JSON_FACTORY.createGenerator(output)) {
             writer.write(message, generator);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return output.toString();
     }
