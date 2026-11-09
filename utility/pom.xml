@@ -28,8 +28,8 @@
             <artifactId>protobuf-java-util</artifactId>
         </dependency>
         <dependency>
-            <!-- for compiling the module descriptor, which requires com.google.gson; at runtime gson comes from
-                 protobuf-java-util, so this is the version it depends on -->
+            <!-- for compiling the module descriptor, which requires com.google.gson; provided, as at runtime gson comes
+                 from protobuf-java-util, in the version protobuf-java-util depends on -->
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.15.0</version>

@@ -302,6 +302,17 @@ The stream and accessor writers generate classes at runtime, which needs no furt
 `path`, `api` and `lite` jars have their module descriptor in `META-INF/versions/9` rather than at the root, which older
 Android tools fail on. The `module-tests` modules run named application modules with the writers on the module path.
 
+## Building
+The build needs Java 25, as the `stream` and `accessor` modules target Java 24 and the benchmarks Java 25. To compile,
+test and package all modules, including the module path tests and the benchmark jars (about two minutes):
+
+```bash
+./mvnw verify
+```
+
+See [AGENTS.md](AGENTS.md) for the repository layout, more build commands and the code conventions, and
+[benchmarks](benchmarks/README.md) for running the benchmarks.
+
 ## License
 [Apache-2.0](LICENSE.txt).
 
