@@ -77,7 +77,7 @@ public class LiteProtobufJsonWriter implements ProtobufJsonWriter<MessageLiteOrB
         /**
          * Register a message type, for google.protobuf.Any.
          *
-         * @param typeUrl         type url, i.e. type.googleapis.com/my.package.MyMessage, or the full type name
+         * @param typeUrl         type url, e.g. type.googleapis.com/my.package.MyMessage, or the full type name
          * @param defaultInstance a message of the type
          * @return this builder
          */

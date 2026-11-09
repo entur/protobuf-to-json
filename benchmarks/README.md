@@ -81,7 +81,7 @@ seen in use:
    Binary serialization of the large payload is compiled in one of two ways (about 14 or 17 microseconds) depending on
    what else the JVM does, so the results are the medians of five JVMs
  * `LiteWriterJitBenchmark`, in `benchmark-lite`, measures the lite writer depending on whether it has also written to a
-   character-based generator (i.e. with `writeAsString`)
+   character-based generator (e.g. with `writeAsString`)
 
 `MemoryFootprint` (not JMH) measures the memory a writer uses besides what it allocates per message: the classes it loads
 or generates (metaspace), its JIT-compiled code (code cache) and the heap it keeps, after writing a set of messages for five

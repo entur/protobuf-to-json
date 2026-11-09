@@ -261,7 +261,7 @@ public final class FilteredJsonValues {
     }
 
     /**
-     * Write a pre-encoded string which is not text as is, i.e. an enum name.
+     * Write a pre-encoded string which is not text as is, e.g. an enum name.
      */
 
     public boolean writeUntruncated(SerializableString name, int nameSize, SerializableString value) {

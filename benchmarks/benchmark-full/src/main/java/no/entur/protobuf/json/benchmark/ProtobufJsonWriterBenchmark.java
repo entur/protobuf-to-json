@@ -90,7 +90,7 @@ public class ProtobufJsonWriterBenchmark {
     }
 
     /**
-     * Serialize a message to binary, like an application which sends it (i.e. with gRPC) does. This affects how the JIT
+     * Serialize a message to binary, like an application which sends it (e.g. with gRPC) does. This affects how the JIT
      * compiles the generated serialization code, which the stream writer also uses: if the message types are never
      * serialized to binary, the stream writer is up to twice as slow.
      *

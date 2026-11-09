@@ -168,8 +168,8 @@ final class LiteJsonValues {
     /**
      * Type name of a type url, like JsonFormat: the last part, ignoring trailing slashes.
      *
-     * @param typeUrl type url, i.e. type.googleapis.com/google.protobuf.Duration
-     * @return type name, i.e. google.protobuf.Duration
+     * @param typeUrl type url, e.g. type.googleapis.com/google.protobuf.Duration
+     * @return type name, e.g. google.protobuf.Duration
      * @throws InvalidProtocolBufferException if the type url has no slash, other than trailing slashes
      */
 

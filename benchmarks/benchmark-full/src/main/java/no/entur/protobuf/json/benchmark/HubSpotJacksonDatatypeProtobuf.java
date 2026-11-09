@@ -30,7 +30,7 @@ public final class HubSpotJacksonDatatypeProtobuf {
 
     /**
      * @param mapper mapper with the module
-     * @return writer, i.e. for comparing with JsonFormat
+     * @return writer, e.g. for comparing with JsonFormat
      */
 
     public static ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> createWriter(JsonMapper mapper) {

@@ -53,7 +53,7 @@ public final class JsonTimes {
     }
 
     /**
-     * Format a valid timestamp like Timestamps.toString, i.e. 1972-01-01T10:00:20.021Z.
+     * Format a valid timestamp like Timestamps.toString, e.g. 1972-01-01T10:00:20.021Z.
      *
      * @param seconds seconds since the epoch
      * @param nanos   nanos
@@ -66,7 +66,7 @@ public final class JsonTimes {
     }
 
     /**
-     * Format a valid timestamp like Timestamps.toString, i.e. 1972-01-01T10:00:20.021Z.
+     * Format a valid timestamp like Timestamps.toString, e.g. 1972-01-01T10:00:20.021Z.
      *
      * @param seconds seconds since the epoch
      * @param nanos   nanos
@@ -106,7 +106,7 @@ public final class JsonTimes {
     }
 
     /**
-     * Format a valid duration like Durations.toString, i.e. 1.5s.
+     * Format a valid duration like Durations.toString, e.g. 1.5s.
      *
      * @param seconds seconds
      * @param nanos   nanos, with the same sign as seconds
@@ -119,7 +119,7 @@ public final class JsonTimes {
     }
 
     /**
-     * Format a valid duration like Durations.toString, i.e. 1.5s.
+     * Format a valid duration like Durations.toString, e.g. 1.5s.
      *
      * @param seconds seconds
      * @param nanos   nanos, with the same sign as seconds

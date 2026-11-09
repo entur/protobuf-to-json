@@ -3,11 +3,37 @@
 High-performance protobuf-to-JSON conversion. With or without filtering. Regular or lite messages. Multiple writers.
 
 ## Usage
+Add a writer module, here the `accessor` writer (see [Choosing a writer](#choosing-a-writer) and
+[Maven coordinates](#maven-coordinates) for the others):
+
+```xml
+<dependency>
+    <groupId>no.entur.protobuf-to-json</groupId>
+    <artifactId>protobuf-to-json-accessor</artifactId>
+    <version>${protobuf-to-json.version}</version>
+</dependency>
+```
+
+The `accessor` and `stream` writers need Java 24 or later. On Java 17 to 23, use the transcoding writer
+(`TranscodingProtobufJsonWriter` in `protobuf-to-json-transcode`), which has the same builder.
+
 Writers are thread-safe; create them once and reuse them:
 
 ```java
+import com.google.protobuf.MessageOrBuilder;
+import com.google.protobuf.util.JsonFormat;
+import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.accessor.AccessorProtobufJsonWriter;
+import tools.jackson.core.JsonGenerator;
+
+// the types of google.protobuf.Any values; add(..) also adds the other types of their .proto files, and of the
+// files those import
+JsonFormat.TypeRegistry typeRegistry = JsonFormat.TypeRegistry.newBuilder()
+        .add(MyMessage.getDescriptor())
+        .build();
+
 ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = AccessorProtobufJsonWriter.newBuilder()
-        .withTypeRegistry(typeRegistry) // for google.protobuf.Any
+        .withTypeRegistry(typeRegistry)
         .withAnonymizeKeys("password", "token")
         .withPrunePaths("$.customer.photo")
         .withMaxStringLength(1024)
@@ -16,6 +42,24 @@ ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = AccessorProtobufJso
 
 String json = writer.writeAsString(message);
 ```
+
+The full protobuf writers write to Jackson 3 generators (`tools.jackson.core`), the lite writer to Jackson 2 generators
+(`com.fasterxml.jackson.core`). To write a message as part of a document of your own:
+
+```java
+JsonFactory factory = new JsonFactory(); // tools.jackson.core.json.JsonFactory; create it once
+try (JsonGenerator generator = factory.createGenerator(ObjectWriteContext.empty(), outputStream)) {
+    boolean complete = writer.write(message, generator); // false if cut short by the max size
+}
+```
+
+With a library which writes JSON with another Jackson version, use `writeAsString(..)`, and write the result as a raw
+value.
+
+`write(..)` and `writeAsString(..)` declare `IOException`. The full protobuf writers throw
+`InvalidProtocolBufferException`, an `IOException`, for a `google.protobuf.Any` whose type is not registered (see
+[Unresolved Any](#unresolved-any)), as `JsonFormat` does. Jackson 3 generators report write failures with the unchecked
+`JacksonException`.
 
 ## Protobuf (regular) message writers
 Alternative writers, with different trade-offs between speed, memory usage and JIT compilation:
@@ -33,6 +77,8 @@ See [PERFORMANCE.md](PERFORMANCE.md).
 ### Choosing a writer
 Use the `accessor writer`, unless:
 
+ * the application runs on Java 17 to 23: use the `transcoding` writer, as the `accessor` and `stream` writers need
+   Java 24
  * the application writes very many message types: the `stream` writer uses less memory per message type, about half a
    KB of metaspace per field written against about 2 KB, and about 1 MB less in all (see
    [memory per message type](PERFORMANCE.md#memory-per-message-type))
@@ -54,12 +100,10 @@ public protobuf APIs and runs on Java 17, but is the slowest of the three.
 <details>
 <summary>Differences from JsonFormat</summary>
 
-### Comparison from JsonFormat
-
 * extensions are not written
 * out of range `google.protobuf.Timestamp` and `google.protobuf.Duration` values are written as objects, rather than failing
 * NaN and infinity `google.protobuf.Value` numbers are written as strings, rather than failing
-* escaping is left to the generator, so i.e. `=` and `<` are not written as unicode escapes
+* escaping is left to the generator, so e.g. `=` and `<` are not written as unicode escapes
 * an unregistered `google.protobuf.Any` fails the write, as JsonFormat does, unless
   `withUnresolvedAny(UnresolvedAny.VALUE)` is set. That writes `{"@type": url, "@value": base64}` and does not parse
   the payload, see [Unresolved Any](#unresolved-any). A type URL without a `/` still fails. An empty Any is still `{}`
@@ -67,14 +111,14 @@ public protobuf APIs and runs on Java 17, but is the slowest of the three.
 No JSON key is written twice:
 
 * fields are expected in increasing field number order, as protobuf serializes them; a field number seen again after
-  a higher one (i.e. in the unknown fields) is skipped.
+  a higher one (e.g. in the unknown fields) is skipped.
 * map entries with a key already written are skipped, keeping the first entry (protobuf keeps the last when
-  parsing). Generated messages never have duplicate keys, but i.e. a `DynamicMessage` can; `JsonFormat` then writes
+  parsing). Generated messages never have duplicate keys, but e.g. a `DynamicMessage` can; `JsonFormat` then writes
   the key twice.
 
 ### Checking the output
-Use `JsonFormatComparison` (in the `utility` module) to check that a writer writes the same as `JsonFormat` for your
-messages, i.e. in a unit test:
+Use `JsonFormatComparison` (`no.entur.protobuf.json.jsonformat`, in the `utility` module) to check that a writer writes the same as `JsonFormat` for your
+messages, e.g. in a unit test:
 
 ```java
 JsonFormatComparison comparison = JsonFormatComparison.newBuilder()
@@ -85,7 +129,7 @@ JsonFormatComparison comparison = JsonFormatComparison.newBuilder()
 comparison.verify(myMessage); // throws IllegalStateException with the differences
 ```
 
-Outputs are compared as JSON values, so escaping and number notation do not matter (`JsonFormat` escapes i.e. `=`
+Outputs are compared as JSON values, so escaping and number notation do not matter (`JsonFormat` escapes e.g. `=`
 as `\u003d`). Duplicate properties are reported.
 
 
@@ -126,7 +170,7 @@ from JsonFormat:
    unless `withUnresolvedAny(UnresolvedAny.VALUE)` is set, which writes `{"@type": url, "@value": base64}`
 
 `writeAsString` writes characters, so max size then counts characters. Jackson 2 generators which write UTF-8 escape
-surrogate pairs (i.e. emojis) as `\uXXXX\uXXXX` unless `COMBINE_UNICODE_SURROGATES_IN_UTF8` is enabled; max size takes this
+surrogate pairs (e.g. emojis) as `\uXXXX\uXXXX` unless `COMBINE_UNICODE_SURROGATES_IN_UTF8` is enabled; max size takes this
 into account.
 
 </details>
@@ -185,7 +229,9 @@ Lengths are counted in UTF-16
 characters, a surrogate pair is never split, and a string is only truncated if that makes it shorter.
 
 ### Max (output) size
-Max size counts the JSON as written by a Jackson generator with default settings and no pretty printer. 
+Max size counts the JSON as written by a Jackson generator with default settings and no pretty printer: bytes for
+generators which write UTF-8 bytes, characters otherwise. `writeAsString(..)` writes UTF-8 bytes with the full protobuf
+writers, and characters with the lite writer.
 
 A field name is
 only written together with its value, and room for the closing brackets is reserved, so the output is always valid
@@ -197,14 +243,15 @@ boolean complete = writer.write(message, generator);
 
 Only the max size makes `write(..)` return `false`; shortened strings (max string length), and pruned or anonymized values, do not.
 
-A root value which is not an object or array (i.e. a `google.protobuf.Timestamp`) is always written, as is the root
+A root value which is not an object or array (e.g. a `google.protobuf.Timestamp`) is always written, as is the root
 object or array.
 
 ### Unresolved Any
 With `withUnresolvedAny(UnresolvedAny.VALUE)`, a `google.protobuf.Any` whose type is not registered is written as
 `{"@type": url, "@value": base64}`, without parsing the payload. No protobuf JSON field is named `@value`, so a parser
-rejects it rather than reading the payload as a field. The well-known types are always resolved, also by the full
-protobuf writers when they are not in the type registry.
+rejects it rather than reading the payload as a field. Well-known types are still written as such, also when they are
+not in the type registry. With the default, `UnresolvedAny.FAIL`, the full protobuf writers fail for a well-known type
+which is not in the type registry, as `JsonFormat` does; the lite writer always knows the well-known types.
 
 Paths match `@type` and `@value` as usual, and max string length applies to both. Paths cannot match within the payload,
 so it is pruned (if such a path prunes) or anonymized if a path could have matched within it:
@@ -217,7 +264,7 @@ A path below a field which a shorter absolute path filters as a whole does not c
 
 ## Performance
 By message size as JSON, without filtering; the best value of each column in **bold**. See [PERFORMANCE.md](PERFORMANCE.md)
-for more, i.e. filtering, and [benchmarks](benchmarks/README.md) for the messages.
+for more, including filtering, and [benchmarks](benchmarks/README.md) for the messages.
 
 ### CPU
 Time per message in microseconds:
@@ -285,7 +332,10 @@ Use the writer classes and their builders (`AbstractProtobufJsonWriterBuilder`).
 the writer modules and the generated writers use them, so they are not application API and may change between releases:
 the `plan` package, the `no.entur.protobuf.json.filter` package (except `JsonFilter`, which the builders return and the
 filtering writers take), `MessageWriters`, `MessageWriter` and `FilteringMessageWriter` in the accessor module, and
-`CodedOutputStreamSink` in the stream module. The path matcher implementation is not public.
+`CodedOutputStreamSink` in the stream module. The same goes for the public constructors of the transcoding writers
+(which take a `Plans`), and their methods other than those of `ProtobufJsonWriter`: `writeMessage(..)`,
+`writeDefault(..)`, `writeWellKnown(..)`, and the `write(..)` methods which take a `Message` or `FilteredJsonValues`. The
+path matcher implementation is not public.
 
 ### Module path
 
@@ -294,7 +344,8 @@ Require the writer module: `no.entur.protobuf.json.accessor`, `no.entur.protobuf
 
 * export the packages of the messages: protobuf's own reflection (as in `JsonFormat`), the accessor writer and the lite
   writer read the messages through their public methods and fields. Without the export, the accessor writer transcodes
-  instead, and the lite writer fails.
+  instead, which is slower, and the lite writer fails. The accessor writer logs such fallbacks at `FINE` with
+  `java.util.logging`, once per message class (logger `no.entur.protobuf.json.accessor.MessageWriters`).
 * if the message classes are loaded by another class loader than this library, the accessor writer defines its writers
   in the packages of the messages: open those packages to `no.entur.protobuf.json.accessor`.
 

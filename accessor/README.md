@@ -52,7 +52,7 @@ verified with reflection:
 
  * the field name in upper camel case: `foo_bar` gets `getFooBar()`; group fields are named after their type
  * an underscore appended if the name would collide with a method of the base classes: `class` gets `getClass_()`
- * the field number appended if the accessors of two fields would collide, i.e. a repeated field `foo` (with
+ * the field number appended if the accessors of two fields would collide, e.g. a repeated field `foo` (with
    `getFooCount()`) and a field `foo_count`
 
 | Field | Present if | Value |
@@ -104,7 +104,7 @@ static void write(JsonGenerator generator, SerializableString name, Item message
    bootstrap method (`MessageWriters.bootstrap`) generates or finds the code for the message type of the field, and links
    the call to it for good (a constant call site), so that the JIT can inline it. So code is only generated for the message
    types which are written, and recursive message types are no problem.
- * Well-known types have methods of their own (`writeTimestamp`, `writeInt64Value`, ...), which i.e. format timestamps
+ * Well-known types have methods of their own (`writeTimestamp`, `writeInt64Value`, ...), which, for example, format timestamps
    without allocating a string. The contents of `google.protobuf.Any` values are transcoded from their bytes, with the
    type registry.
 
@@ -115,7 +115,7 @@ which write the values with Jackson. It calls them through a class with the same
 `AccessorJsonValues` and are padded with no-op instructions to more than the size of methods the JIT inlines
 (`-XX:FreqInlineSize`, 325 bytes by default).
 
-Inlined into the code of every message type, writing the values (i.e. Jackson's string encoding) made the compiled code of
+Inlined into the code of every message type, writing the values (e.g. Jackson's string encoding) made the compiled code of
 a message type with many fields so large that the JIT stopped inlining before the end of it, so that even the accessors
 were calls, and optimized the rest less well: about 30% slower. Called out of line, the writing of each kind of value is
 compiled once.
@@ -141,7 +141,7 @@ is the same: the tests compare it with filtering the unfiltered output with a re
 ### Where the code is defined
 
 The hidden classes are defined in this library's package, if its class loader can see the classes of the messages.
-Otherwise (i.e. messages of an application whose libraries are loaded by a parent class loader), they are defined in the
+Otherwise (e.g. messages of an application whose libraries are loaded by a parent class loader), they are defined in the
 package of the message. A package-private class is defined there first, to get a lookup with full privilege access to the
 package; in a named module, the package must be open to this library.
 
@@ -149,7 +149,7 @@ package; in a named module, the package must be open to this library.
 
 These messages are transcoded instead, with `TranscodingProtobufJsonWriter`, which writes the same:
 
- * messages which are not generated, i.e. `DynamicMessage`
+ * messages which are not generated, e.g. `DynamicMessage`
  * well-known types as the root message
  * message types for which no code can be generated: if an accessor is not found as expected, or if the class loaders of
    the messages and of this library cannot see each other's classes. That failure is logged at fine, once per message

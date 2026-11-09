@@ -17,7 +17,7 @@ import java.util.Base64;
 /**
  * Write (scalar) field values from their wire format representation, using the
  * <a href="https://protobuf.dev/programming-guides/json/">ProtoJSON format</a>
- * (i.e. 64-bit integers as strings, unsigned integers as unsigned, bytes as base64).
+ * (e.g. 64-bit integers as strings, unsigned integers as unsigned, bytes as base64).
  * <br><br>
  * Internal; shared by the JSON writer implementations.
  */

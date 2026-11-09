@@ -69,10 +69,10 @@ public enum WellKnownType {
     }
 
     /**
-     * The descriptor of a well-known type which comes with protobuf-java, i.e. for a google.protobuf.Any whose type is not
+     * The descriptor of a well-known type which comes with protobuf-java, e.g. for a google.protobuf.Any whose type is not
      * in the type registry.
      *
-     * @param fullName full name of the type, i.e. google.protobuf.Duration
+     * @param fullName full name of the type, e.g. google.protobuf.Duration
      * @return descriptor, or null if the type is not a well-known type with a special JSON mapping
      */
 

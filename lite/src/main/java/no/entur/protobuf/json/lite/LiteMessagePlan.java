@@ -86,7 +86,7 @@ final class LiteMessagePlan {
             try {
                 number = field.getInt(null);
             } catch (IllegalAccessException e) {
-                // i.e. on the module path, if the package is not exported; skipping the field would write {} silently
+                // e.g. on the module path, if the package is not exported; skipping the field would write {} silently
                 throw new IllegalStateException("Unable to read " + type.getName() + "." + field.getName() + "; on the module path, "
                         + "the module of " + type.getName() + " must export its package (at least to no.entur.protobuf.json.lite)", e);
             }
@@ -181,7 +181,7 @@ final class LiteMessagePlan {
 
         LiteFieldInfo info = createField(base, number, camelCase, upperCase, accessors, plans);
         if (info == null) {
-            // protoc appends an underscore to names which would clash with other methods, i.e. getClass_() for a field named class
+            // protoc appends an underscore to names which would clash with other methods, e.g. getClass_() for a field named class
             info = createField(base, number, camelCase + "_", upperCase + "_", accessors, plans);
         }
         return info;
@@ -201,7 +201,7 @@ final class LiteMessagePlan {
             kind = LiteFieldInfo.SINGULAR;
             suffix = getter.getName().substring(3);
         } else {
-            // i.e. an extension
+            // e.g. an extension
             return null;
         }
 
@@ -279,7 +279,7 @@ final class LiteMessagePlan {
      * JSON name of a field.
      *
      * @param base     upper case field name, from the field number constant
-     * @param accessor the accessor name without prefix and suffix, i.e. FieldName for getFieldNameList
+     * @param accessor the accessor name without prefix and suffix, e.g. FieldName for getFieldNameList
      * @return JSON name
      */
 
@@ -290,7 +290,7 @@ final class LiteMessagePlan {
                 letters++;
             }
         }
-        // protoc appends an underscore to accessor names which would clash, i.e. getClass_
+        // protoc appends an underscore to accessor names which would clash, e.g. getClass_
         boolean aligned = accessor.length() == letters || (accessor.length() == letters + 1 && accessor.endsWith("_"));
 
         StringBuilder original = new StringBuilder(base.length());

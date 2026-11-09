@@ -821,7 +821,7 @@ final class FilteringCodedOutputStreamJsonSink implements CodedOutputStreamSink 
 
     // ---- raw bytes ----
     // Not used by protobuf for fields: generated code and the reflection-based serialization (MessageReflection, FieldSet,
-    // UnknownFieldSet) write no field data through these methods, only user code does (i.e. via writeRawBytes or
+    // UnknownFieldSet) write no field data through these methods, only user code does (e.g. via writeRawBytes or
     // UnsafeByteOperations.unsafeWriteTo). Fail rather than drop the data silently. CodedOutputStreamConventions checks how
     // protobuf writes fields when a writer is created.
 

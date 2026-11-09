@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Messages with all kinds of values for the filter tests, i.e. strings with surrogate pairs and escapes, unknown enum values,
+ * Messages with all kinds of values for the filter tests, e.g. strings with surrogate pairs and escapes, unknown enum values,
  * NaN, well-known types and google.protobuf.Any, and well-known types as the root.
  */
 

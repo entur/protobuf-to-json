@@ -33,7 +33,7 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * On the module path, where protobuf is another module than this library, a class which provides a lookup with full
  * privilege access is defined in the protobuf package first (see {@linkplain #getLookup()}).
  * <br><br>
- * If the subclass cannot be generated, i.e. for an incompatible protobuf version, or if protobuf is loaded by a class loader
+ * If the subclass cannot be generated, e.g. for an incompatible protobuf version, or if protobuf is loaded by a class loader
  * which cannot see this library, or if the sinks do not handle how this protobuf version writes messages (see
  * {@linkplain CodedOutputStreamConventions}), the writers delegate to the transcoding writers, which write the same JSON
  * (more slowly), rather than fail or drop or garble fields. This is checked once, when the first writer is created, and
@@ -93,7 +93,7 @@ final class JsonCodedOutputStreamFactory {
     /**
      * Run a check, and log a warning if it fails.
      *
-     * @param check the check, i.e. {@linkplain #verify()}
+     * @param check the check, e.g. {@linkplain #verify()}
      * @return true if the check passed
      */
 

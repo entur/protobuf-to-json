@@ -512,7 +512,7 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     }
 
     /**
-     * Write the default value of a field, i.e. for map entries without value.
+     * Write the default value of a field, e.g. for map entries without value.
      */
 
     public boolean writeDefault(FieldInfo field, FilteredJsonValues values, SerializableString name, int nameSize, boolean anonymize) throws IOException {

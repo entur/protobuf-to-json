@@ -57,7 +57,7 @@ enum LiteWellKnownType {
     /**
      * Full name of the type, for type urls.
      *
-     * @return full name, i.e. google.protobuf.Timestamp
+     * @return full name, e.g. google.protobuf.Timestamp
      */
 
     String getFullName() {

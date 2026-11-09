@@ -2,7 +2,7 @@
 
 How fast the writers are (CPU) and how much memory they use, writing a message as UTF-8 JSON. 
 
-JMH on OpenJDK 25 on Fedora Linx + AMD Ryzen 9 9950X, two JVMs for each benchmark.
+JMH on OpenJDK 25 on Fedora Linux + AMD Ryzen 9 9950X, two JVMs for each benchmark.
 
 The small, medium, large, xlarge and xxlarge messages are 0.2 KB, 14 KB, 38 KB, 127 KB and 254 KB as JSON. 
 

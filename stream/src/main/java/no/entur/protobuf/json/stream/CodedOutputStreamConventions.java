@@ -35,7 +35,7 @@ import java.util.List;
  * <br><br>
  * Probe messages bundled with protobuf-java are written by both sinks, and must give the same JSON as the transcoding
  * writers, which read the binary format. The probes are written by their generated code, which calls the runtime's
- * helpers (i.e. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
+ * helpers (e.g. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
  * messages optimized for code size. Together they have packed and repeated fields, maps written by the runtime, strings,
  * bytes, 64-bit integers, doubles, bools, nested and well-known messages, and unknown fields (including a group).
  * A probe the transcoding writers cannot write with the protobuf version at runtime is skipped: the map probe
@@ -169,7 +169,7 @@ final class CodedOutputStreamConventions {
         try {
             actual = write(write);
         } catch (RuntimeException e) {
-            // i.e. a method the sink does not handle, or an invalid JSON structure
+            // e.g. a method the sink does not handle, or an invalid JSON structure
             throw new IllegalStateException(sink.getSimpleName() + " failed to write " + message.getDescriptorForType().getFullName(), e);
         }
         if (!expected.equals(actual)) {

@@ -43,7 +43,7 @@ import java.util.Set;
 
 /**
  * Memory used by a writer, besides what it allocates per message (see {@code -prof gc} of the JMH benchmarks): the classes it
- * loads or generates (metaspace), its JIT-compiled code (code cache) and the heap it keeps (i.e. caches per message type),
+ * loads or generates (metaspace), its JIT-compiled code (code cache) and the heap it keeps (e.g. caches per message type),
  * after writing a set of messages for a while. Relative to a baseline which only serializes the messages to binary.
  * <br><br>
  * Each writer runs in its own JVM, with the serial garbage collector for a precise heap size after a full GC:
@@ -101,7 +101,7 @@ public class MemoryFootprint {
         try {
             snapshot = measure(args[0], args[1]);
         } catch (RuntimeException e) {
-            // i.e. curioswitch protobuf-jackson cannot write descriptors
+            // e.g. curioswitch protobuf-jackson cannot write descriptors
             e.printStackTrace();
             System.out.println("unsupported");
             return;

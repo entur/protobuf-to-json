@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * The generated writers, one unfiltered and one filtering writer per message class, generated when first used (or when
  * registered) and shared by all writer instances.
  * <br><br>
- * Messages which are not generated (i.e. {@linkplain com.google.protobuf.DynamicMessage}), the well-known types (as root
+ * Messages which are not generated (e.g. {@linkplain com.google.protobuf.DynamicMessage}), the well-known types (as root
  * values), and message classes a writer cannot be generated for, are transcoded instead. A generation failure is logged
  * at fine, once per message class, when that level is enabled. DynamicMessage and the well-known types are expected
  * fallbacks and are not logged.

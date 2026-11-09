@@ -250,7 +250,7 @@ final class MessageAccessors {
         if (kind.type != null) {
             return kind.type;
         }
-        // i.e. Map<String, NestedMessage>
+        // e.g. Map<String, NestedMessage>
         Type returnType = get.getGenericReturnType();
         if (returnType instanceof ParameterizedType parameterized && parameterized.getActualTypeArguments()[1] instanceof Class<?> valueType) {
             checkValueType(valueType, value, kind);
@@ -348,7 +348,7 @@ final class MessageAccessors {
     }
 
     /**
-     * Like protoc: letters after an underscore or a digit are capitalized, other characters (i.e. underscores) are removed,
+     * Like protoc: letters after an underscore or a digit are capitalized, other characters (e.g. underscores) are removed,
      * and the first letter is capitalized.
      */
 
