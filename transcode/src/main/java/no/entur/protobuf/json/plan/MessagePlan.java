@@ -5,8 +5,6 @@ import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.WireFormat;
-import com.google.protobuf.util.JsonEnumValueOptions;
-import com.google.protobuf.util.JsonEnumvalueOptionsProto;
 import no.entur.protobuf.json.filter.JsonOutputSize;
 import tools.jackson.core.SerializableString;
 import tools.jackson.core.io.SerializedString;
@@ -63,7 +61,7 @@ public final class MessagePlan {
             boolean negative = false;
             for (EnumValueDescriptor value : descriptor.getValues()) {
                 // first value wins for aliases, like in the generated code
-                names.putIfAbsent(value.getNumber(), new SerializedString(getJsonName(value)));
+                names.putIfAbsent(value.getNumber(), new SerializedString(JsonEnumValueNames.getJsonName(value)));
                 max = Math.max(max, value.getNumber());
                 negative |= value.getNumber() < 0;
             }
@@ -77,14 +75,6 @@ public final class MessagePlan {
                 dense = null;
                 sparse = names;
             }
-        }
-
-        private static String getJsonName(EnumValueDescriptor value) {
-            JsonEnumValueOptions options = value.getOptions().getExtension(JsonEnumvalueOptionsProto.json);
-            if (options.hasString()) {
-                return options.getString();
-            }
-            return value.getName();
         }
 
         public boolean isNullValue() {

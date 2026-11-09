@@ -46,8 +46,8 @@ Use the `accessor writer`, unless:
    another JIT, or a larger `-XX:FreqInlineSize`, it could lose about 30%
 
 The `stream` writer, in turn, depends on protobuf internals: the private constructor of `CodedOutputStream`, and which of
-its methods the generated code calls. So a protobuf upgrade can break it; it then logs a warning and delegates to the
-transcoding writer, which writes the same JSON more slowly. The `accessor` writer
+its methods the generated code calls. It needs protobuf 4.32 or later, and a protobuf upgrade can break it; otherwise it
+logs a warning and delegates to the transcoding writer, which writes the same JSON more slowly. The `accessor` writer
 only depends on the names of the accessors, which are part of protobuf's generated API. The transcoding writer only uses
 public protobuf APIs and runs on Java 17, but is the slowest of the three.
 
@@ -278,6 +278,12 @@ Group id is `no.entur.protobuf-to-json`.
 | `test-support` | not published | the test messages, random messages and the benchmark payloads, also as files for the lite modules | - | 17 |
 | `benchmarks` | not published | JMH benchmarks, see [benchmarks](benchmarks/README.md) | 2 and 3 | 25 |
 | `module-tests` | not published | named application modules which write messages with the writers on the module path | 2 and 3 | 25 |
+
+The published modules need protobuf 4.27 or later: protobuf-java and protobuf-java-util (of the same version) for the
+full protobuf modules, protobuf-javalite for `lite`. Protobuf 3 is not supported. Protobuf 4.26 works too, except for
+messages from edition files, which it supports only experimentally. With protobuf versions before 4.32 the `stream`
+writer delegates to the transcoding writer. Custom JSON names of enum values (an option for edition 2026 files) need
+protobuf-java-util 4.36 or later; with older versions, enum values are written with their names.
 
 ## Supported API
 
