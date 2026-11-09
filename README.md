@@ -46,7 +46,8 @@ Use the `accessor writer`, unless:
    another JIT, or a larger `-XX:FreqInlineSize`, it could lose about 30%
 
 The `stream` writer, in turn, depends on protobuf internals: the private constructor of `CodedOutputStream`, and which of
-its methods the generated code calls. So a protobuf upgrade can break it (it then fails when created). The `accessor` writer
+its methods the generated code calls. So a protobuf upgrade can break it; it then logs a warning and delegates to the
+transcoding writer, which writes the same JSON more slowly. The `accessor` writer
 only depends on the names of the accessors, which are part of protobuf's generated API. The transcoding writer only uses
 public protobuf APIs and runs on Java 17, but is the slowest of the three.
 
