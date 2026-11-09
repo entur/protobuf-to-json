@@ -38,8 +38,9 @@ import java.util.List;
  * helpers (i.e. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
  * messages optimized for code size. Together they have packed and repeated fields, maps written by the runtime, strings,
  * bytes, 64-bit integers, doubles, bools, nested and well-known messages, and unknown fields (including a group).
- * A probe the transcoding writers cannot write with the protobuf version at runtime is skipped: the map probe
- * (google.protobuf.Struct, whose values have an enum field) with protobuf-java before 4.36.
+ * No probe is skipped: the transcoding writers write all of them with every supported protobuf version, also the map probe
+ * (google.protobuf.Struct, whose values have an enum field) without the custom enum names of protobuf-java-util 4.36.
+ * So a probe which a sink fails on, or writes differently, always fails the check.
  * <br><br>
  * The check runs once, the first time a stream writer is created.
  */
