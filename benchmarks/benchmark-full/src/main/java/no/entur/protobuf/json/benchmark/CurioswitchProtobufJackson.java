@@ -19,6 +19,7 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * <a href="https://github.com/curioswitch/protobuf-jackson">curioswitch protobuf-jackson</a>, which generates a marshaller per
@@ -70,15 +71,19 @@ public final class CurioswitchProtobufJackson {
     public static ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> createWriter(MessageMarshaller marshaller) {
         return new ProtobufJsonWriter<>() {
             @Override
-            public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+            public boolean write(MessageOrBuilder message, JsonGenerator generator) {
                 // writes with its own (Jackson 2) generator
                 generator.writeRawValue(writeAsString(message));
                 return true;
             }
 
             @Override
-            public String writeAsString(MessageOrBuilder message) throws IOException {
-                return marshaller.writeValueAsString((Message) message);
+            public String writeAsString(MessageOrBuilder message) {
+                try {
+                    return marshaller.writeValueAsString((Message) message);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
             }
         };
     }

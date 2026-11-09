@@ -14,6 +14,7 @@ import no.entur.protobuf.json.transcode.FilteringTranscodingProtobufJsonWriter;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * {@linkplain CodedOutputStreamProtobufJsonWriter} with filtering (anonymize and prune paths, max string length and max size).
@@ -55,7 +56,7 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         if (!streaming) {
             return transcoder.write(message, generator);
         }
@@ -68,16 +69,20 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
 
         FilteredJsonValues values = new FilteredJsonValues(filter, generator);
         MessagePlan plan = plans.get(m.getDescriptorForType());
-        if (plan.wellKnownType != null) {
-            transcoder.writeWellKnown(plan.wellKnownType, m, values, null, 0, false);
-        } else {
-            new FilteringCodedOutputStreamJsonSink(plans, transcoder, values).write(m);
+        try {
+            if (plan.wellKnownType != null) {
+                transcoder.writeWellKnown(plan.wellKnownType, m, values, null, 0, false);
+            } else {
+                new FilteringCodedOutputStreamJsonSink(plans, transcoder, values).write(m);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return !values.isStopped();
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 }

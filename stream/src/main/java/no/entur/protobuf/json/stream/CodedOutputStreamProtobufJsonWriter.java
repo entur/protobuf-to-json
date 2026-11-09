@@ -14,6 +14,7 @@ import no.entur.protobuf.json.transcode.TranscodingProtobufJsonWriter;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * {@linkplain ProtobufJsonWriter} which lets a message's generated serialization code write JSON directly, via a
@@ -91,7 +92,7 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         if (!streaming) {
             return transcoder.write(message, generator);
         }
@@ -103,16 +104,20 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
         }
 
         MessagePlan plan = plans.get(m.getDescriptorForType());
-        if (plan.wellKnownType != null) {
-            transcoder.writeWellKnown(plan.wellKnownType, m, generator);
-        } else {
-            new CodedOutputStreamJsonSink(plans, transcoder, generator).write(m);
+        try {
+            if (plan.wellKnownType != null) {
+                transcoder.writeWellKnown(plan.wellKnownType, m, generator);
+            } else {
+                new CodedOutputStreamJsonSink(plans, transcoder, generator).write(m);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return true;
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 }

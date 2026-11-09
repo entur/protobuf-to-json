@@ -27,6 +27,7 @@ import no.entur.protobuf.json.filter.JsonTimes;
 import no.entur.protobuf.json.path.FilterType;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,20 +70,24 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
     }
 
     @Override
-    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageLiteOrBuilder message, JsonGenerator generator) {
         MessageLite m = LiteProtobufJsonWriter.toMessage(message);
         FilteredJsonValues values = new FilteredJsonValues(filter, generator);
         LiteMessagePlan plan = plans.get(m.getClass());
-        if (plan.wellKnownType != null) {
-            writeWellKnown(plan.wellKnownType, m, values, null, 0, false);
-        } else {
-            writeMessage(m, plan, values, null, null, 0, false);
+        try {
+            if (plan.wellKnownType != null) {
+                writeWellKnown(plan.wellKnownType, m, values, null, 0, false);
+            } else {
+                writeMessage(m, plan, values, null, null, 0, false);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return !values.isStopped();
     }
 
     @Override
-    public String writeAsString(MessageLiteOrBuilder message) throws IOException {
+    public String writeAsString(MessageLiteOrBuilder message) {
         return LiteProtobufJsonWriter.writeAsString(this, message);
     }
 

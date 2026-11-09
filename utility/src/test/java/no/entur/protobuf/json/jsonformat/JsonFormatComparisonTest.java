@@ -17,6 +17,7 @@ import tools.jackson.core.json.JsonFactory;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,16 +37,18 @@ public class JsonFormatComparisonTest {
         private final JsonFormat.Printer printer = JsonFormat.printer().usingTypeRegistry(TYPE_REGISTRY).omittingInsignificantWhitespace();
 
         @Override
-        public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+        public boolean write(MessageOrBuilder message, JsonGenerator generator) {
             try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), printer.print(message))) {
                 parser.nextToken();
                 generator.copyCurrentStructure(parser);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
             return true;
         }
 
         @Override
-        public String writeAsString(MessageOrBuilder message) throws IOException {
+        public String writeAsString(MessageOrBuilder message) {
             StringWriter output = new StringWriter();
             try (JsonGenerator generator = FACTORY.createGenerator(ObjectWriteContext.empty(), output)) {
                 write(message, generator);

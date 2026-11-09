@@ -261,7 +261,7 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
         // an invalid type url always fails
         for (String invalid : List.of("invalid", "type.googleapis.com/", "/")) {
             Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
-            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer, value));
+            InvalidProtocolBufferException e = TestSupport.assertInvalidProtocolBuffer(() -> TestSupport.writeBytes(writer, value));
             assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
         }
     }

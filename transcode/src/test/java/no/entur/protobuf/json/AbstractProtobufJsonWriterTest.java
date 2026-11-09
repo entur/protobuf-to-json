@@ -21,9 +21,12 @@ import com.google.protobuf_test_messages.proto2.TestMessagesProto2.TestAllTypesP
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3;
 import org.junit.jupiter.api.Test;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -155,8 +158,27 @@ public abstract class AbstractProtobufJsonWriterTest {
                 .setOptionalAny(Any.pack(TestAllTypesProto2.getDefaultInstance()))
                 .build();
 
-        InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer(), message));
+        InvalidProtocolBufferException e = TestSupport.assertInvalidProtocolBuffer(() -> TestSupport.writeBytes(writer(), message));
         assertThat(e).hasMessageThat().contains("Cannot find type for url");
+        e = TestSupport.assertInvalidProtocolBuffer(() -> writer().writeAsString(message));
+        assertThat(e).hasMessageThat().contains("Cannot find type for url");
+    }
+
+    @Test
+    public void generatorFailuresAreNotWrapped() {
+        // Jackson 3 generators report I/O failures with unchecked exceptions of their own
+        OutputStream failing = new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("failing");
+            }
+        };
+        // larger than the buffer of the generator
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalString("x".repeat(100_000)).build();
+        JsonGenerator generator = TestSupport.MAPPER.createGenerator(failing);
+
+        JacksonException e = assertThrows(JacksonException.class, () -> writer().write(message, generator));
+        assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("failing");
     }
 
     @Test
@@ -168,7 +190,7 @@ public abstract class AbstractProtobufJsonWriterTest {
 
         for (String invalid : List.of("invalid", "type.googleapis.com/", "/", "")) {
             Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
-            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer(), value));
+            InvalidProtocolBufferException e = TestSupport.assertInvalidProtocolBuffer(() -> TestSupport.writeBytes(writer(), value));
             assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
         }
     }

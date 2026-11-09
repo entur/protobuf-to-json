@@ -56,10 +56,10 @@ try (JsonGenerator generator = factory.createGenerator(ObjectWriteContext.empty(
 With a library which writes JSON with another Jackson version, use `writeAsString(..)`, and write the result as a raw
 value.
 
-`write(..)` and `writeAsString(..)` declare `IOException`. The full protobuf writers throw
-`InvalidProtocolBufferException`, an `IOException`, for a `google.protobuf.Any` whose type is not registered (see
-[Unresolved Any](#unresolved-any)), as `JsonFormat` does. Jackson 3 generators report write failures with the unchecked
-`JacksonException`.
+`write(..)` and `writeAsString(..)` throw no checked exceptions. If a message cannot be written, they throw an
+`UncheckedIOException`, whose cause is an `InvalidProtocolBufferException` for a `google.protobuf.Any` whose type is not
+registered (see [Unresolved Any](#unresolved-any)) or whose content cannot be parsed, or the `IOException` of a Jackson 2
+generator. Jackson 3 generators throw their own unchecked `JacksonException`, which is not wrapped.
 
 ## Protobuf (regular) message writers
 Alternative writers, with different trade-offs between speed, memory usage and JIT compilation:
@@ -107,6 +107,7 @@ public protobuf APIs and runs on Java 17, but is the slowest of the three.
 * an unregistered `google.protobuf.Any` fails the write, as JsonFormat does, unless
   `withUnresolvedAny(UnresolvedAny.VALUE)` is set. That writes `{"@type": url, "@value": base64}` and does not parse
   the payload, see [Unresolved Any](#unresolved-any). A type URL without a `/` still fails. An empty Any is still `{}`
+* where `JsonFormat` throws `InvalidProtocolBufferException`, the writers throw `UncheckedIOException` with it as cause
 
 No JSON key is written twice:
 

@@ -44,6 +44,7 @@ import tools.jackson.core.SerializableString;
 import tools.jackson.core.io.SerializedString;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -97,18 +98,22 @@ public class FilteringTranscodingProtobufJsonWriter implements ProtobufJsonWrite
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         Message m;
         if (message instanceof Message msg) {
             m = msg;
         } else {
             m = ((Message.Builder) message).buildPartial();
         }
-        return write(m, new FilteredJsonValues(filter, generator));
+        try {
+            return write(m, new FilteredJsonValues(filter, generator));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         return ProtobufJsonWriterSupport.writeAsString(this, message);
     }
 

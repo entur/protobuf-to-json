@@ -7,6 +7,7 @@ import no.entur.protobuf.json.ProtobufJsonWriter;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * {@linkplain ProtobufJsonWriter} using {@linkplain JsonFormat}, for reference. Does not support filtering.
@@ -30,16 +31,20 @@ public class JsonFormatProtobufJsonWriter implements ProtobufJsonWriter<MessageO
     }
 
     @Override
-    public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+    public boolean write(MessageOrBuilder message, JsonGenerator generator) {
         generator.writeRawValue(writeAsString(message));
         return true;
     }
 
     @Override
-    public String writeAsString(MessageOrBuilder message) throws IOException {
+    public String writeAsString(MessageOrBuilder message) {
         int size = message instanceof MessageLite messageLite ? messageLite.getSerializedSize() * 4 : 256;
         StringBuilder builder = new StringBuilder(Math.max(size, 32));
-        printer.appendTo(message, builder);
+        try {
+            printer.appendTo(message, builder);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         return builder.toString();
     }
 

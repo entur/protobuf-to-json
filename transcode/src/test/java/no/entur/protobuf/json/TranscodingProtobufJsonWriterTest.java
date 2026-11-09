@@ -51,7 +51,7 @@ public class TranscodingProtobufJsonWriterTest extends AbstractProtobufJsonWrite
         // by default, the same as JsonFormat, which fails if a well-known type is not registered
         for (Any any : List.of(bytes, duration, message)) {
             assertThrows(InvalidProtocolBufferException.class, () -> JsonFormat.printer().usingTypeRegistry(empty).print(any));
-            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(failing, any));
+            InvalidProtocolBufferException e = TestSupport.assertInvalidProtocolBuffer(() -> TestSupport.writeBytes(failing, any));
             assertThat(e).hasMessageThat().isEqualTo("Cannot find type for url: " + any.getTypeUrl());
         }
     }

@@ -5,10 +5,12 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLiteOrBuilder;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3;
 import no.entur.protobuf.json.ProtobufJsonWriter;
 import no.entur.protobuf.json.filter.ReferenceFilter;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,6 +24,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Shared by the lite tests.
@@ -42,6 +47,19 @@ public final class LiteTestSupport {
     public static final ReferenceFilter.Output UTF8_ESCAPED_SURROGATES = output(FACTORY, true);
 
     private LiteTestSupport() {
+    }
+
+    /**
+     * Assert that a write fails because of the content of a message, for example an unresolved google.protobuf.Any: the
+     * writers throw an {@linkplain UncheckedIOException} with an {@linkplain InvalidProtocolBufferException} as cause.
+     *
+     * @return the cause
+     */
+
+    public static InvalidProtocolBufferException assertInvalidProtocolBuffer(Executable write) {
+        UncheckedIOException e = assertThrows(UncheckedIOException.class, write);
+        assertThat(e).hasCauseThat().isInstanceOf(InvalidProtocolBufferException.class);
+        return (InvalidProtocolBufferException) e.getCause();
     }
 
     public static LiteProtobufJsonWriter.Builder newBuilder() {
