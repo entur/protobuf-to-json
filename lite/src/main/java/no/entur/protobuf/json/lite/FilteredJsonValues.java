@@ -27,6 +27,9 @@ import java.nio.charset.StandardCharsets;
 
 final class FilteredJsonValues {
 
+    // the fields of an unresolved google.protobuf.Any, which paths match as usual
+    private static final String[] UNRESOLVED_ANY_NAMES = {LiteProtobufJsonWriter.TYPE_NAME, LiteProtobufJsonWriter.UNRESOLVED_VALUE_NAME};
+
     private final JsonGenerator generator;
     private final JsonFilter filter;
     private final FilterContext context;
@@ -86,6 +89,17 @@ final class FilteredJsonValues {
 
     FilterType match(String name) {
         return paths ? context.matchName(name) : null;
+    }
+
+    /**
+     * Match the paths which could reach into the payload of an unresolved google.protobuf.Any, in the current object,
+     * which has only the {@code @type} and {@code @value} fields; see {@linkplain FilterContext#matchOpaque(String...)}.
+     *
+     * @return prune, anonymize, or null
+     */
+
+    FilterType matchUnresolvedAny() {
+        return paths ? context.matchOpaque(UNRESOLVED_ANY_NAMES) : null;
     }
 
     private void writeName(Object name) throws IOException {

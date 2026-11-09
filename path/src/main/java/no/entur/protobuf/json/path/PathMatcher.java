@@ -43,4 +43,27 @@ public final class PathMatcher {
         }
         return type;
     }
+
+    /**
+     * Match the paths which could reach into a value which is written opaquely in the current object, i.e. the payload of an
+     * unresolved google.protobuf.Any, written as base64 next to its type url: the any-paths, and the absolute paths which go
+     * on into the current object other than through the given field names (a wildcard counts). Does not change the state of
+     * the matcher.
+     *
+     * @param level      current level, the number of open objects
+     * @param fieldNames names of the fields of the current object which are written as they are
+     * @return {@linkplain FilterType#PRUNE} if such a path prunes, otherwise {@linkplain FilterType#ANON} if such a path
+     * anonymizes, or null if no path could reach into the value
+     */
+
+    public FilterType matchOpaque(int level, String... fieldNames) {
+        FilterType type = null;
+        if (pathItem != null) {
+            type = pathItem.constrain(level).getTypeWithin(level, fieldNames);
+        }
+        if (anyPathFilters != null) {
+            type = FilterType.strongest(type, anyPathFilters.getStrongestType());
+        }
+        return type;
+    }
 }

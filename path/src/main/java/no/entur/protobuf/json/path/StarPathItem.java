@@ -25,4 +25,15 @@ class StarPathItem extends PathItem {
         }
         return next;
     }
+
+    @Override
+    FilterType getTypeWithin(String[] fieldNames) {
+        // the wildcard also matches the fields which are not listed
+        return next.getStrongestType();
+    }
+
+    @Override
+    FilterType getStrongestType() {
+        return next.getStrongestType();
+    }
 }

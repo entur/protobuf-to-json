@@ -28,6 +28,13 @@ public class AnyPathFiltersTest {
     }
 
     @Test
+    public void strongestType() {
+        assertEquals(FilterType.ANON, AnyPathFilters.create(new AnyPathFilter("a", FilterType.ANON)).getStrongestType());
+        assertEquals(FilterType.PRUNE, AnyPathFilters.create(new AnyPathFilter("a", FilterType.ANON), new AnyPathFilter("b", FilterType.PRUNE)).getStrongestType());
+        assertNull(AnyPathFilters.create().getStrongestType());
+    }
+
+    @Test
     public void starIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> new AnyPathFilter("*", FilterType.ANON));
     }

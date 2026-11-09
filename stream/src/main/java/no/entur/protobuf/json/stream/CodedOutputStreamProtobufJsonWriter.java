@@ -5,6 +5,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.AbstractProtobufJsonWriterBuilder;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.plan.MessagePlan;
 import no.entur.protobuf.json.plan.MessagePlan.Plans;
@@ -60,9 +61,9 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
         public ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> build() {
             JsonFilter filter = buildFilter();
             if (filter != null) {
-                return new FilteringCodedOutputStreamProtobufJsonWriter(typeRegistry, filter);
+                return new FilteringCodedOutputStreamProtobufJsonWriter(typeRegistry, filter, unresolvedAny);
             }
-            return new CodedOutputStreamProtobufJsonWriter(typeRegistry);
+            return new CodedOutputStreamProtobufJsonWriter(typeRegistry, unresolvedAny);
         }
     }
 
@@ -71,16 +72,21 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
     private final boolean streaming;
 
     protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry) {
-        this(typeRegistry, JsonCodedOutputStreamFactory.isAvailable());
+        this(typeRegistry, UnresolvedAny.FAIL);
+    }
+
+    protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
+        this(typeRegistry, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable());
     }
 
     /**
-     * @param typeRegistry types for resolving google.protobuf.Any
-     * @param streaming    false to delegate to the transcoding writer
+     * @param typeRegistry  types for resolving google.protobuf.Any
+     * @param unresolvedAny how to write google.protobuf.Any values of types which are not in the registry
+     * @param streaming     false to delegate to the transcoding writer
      */
 
-    CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, boolean streaming) {
-        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry);
+    CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny, boolean streaming) {
+        this.transcoder = new TranscodingProtobufJsonWriter(plans, typeRegistry, unresolvedAny);
         this.streaming = streaming;
     }
 

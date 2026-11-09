@@ -29,4 +29,9 @@ class EndPathItem extends PathItem {
     boolean hasType() {
         return true;
     }
+
+    @Override
+    FilterType getStrongestType() {
+        return filterType;
+    }
 }

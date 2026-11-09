@@ -33,6 +33,11 @@ public final class FilteredJsonValues {
 
     public static final SerializableString TYPE_NAME = new SerializedString("@type");
     public static final SerializableString VALUE_NAME = new SerializedString("value");
+    /** the payload of an unresolved google.protobuf.Any */
+    public static final SerializableString UNRESOLVED_VALUE_NAME = new SerializedString("@value");
+
+    // the fields of an unresolved google.protobuf.Any, which paths match as usual
+    private static final String[] UNRESOLVED_ANY_NAMES = {TYPE_NAME.getValue(), UNRESOLVED_VALUE_NAME.getValue()};
 
     private static final String NAN = "NaN";
     private static final String INFINITY = "Infinity";
@@ -122,6 +127,17 @@ public final class FilteredJsonValues {
 
     public FilterType match(SerializableString name) {
         return paths ? context.matchName(name.getValue()) : null;
+    }
+
+    /**
+     * Match the paths which could reach into the payload of an unresolved google.protobuf.Any, in the current object,
+     * which has only the {@code @type} and {@code @value} fields; see {@linkplain FilterContext#matchOpaque(String...)}.
+     *
+     * @return prune, anonymize, or null
+     */
+
+    public FilterType matchUnresolvedAny() {
+        return paths ? context.matchOpaque(UNRESOLVED_ANY_NAMES) : null;
     }
 
     private void writeName(SerializableString name) {

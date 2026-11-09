@@ -4,6 +4,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3;
 import no.entur.protobuf.json.ProtobufJsonWriter;
 import no.entur.protobuf.json.TestSupport;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.test.RandomMessages;
 import no.entur.protobuf.json.transcode.FilteringTranscodingProtobufJsonWriter;
 import no.entur.protobuf.json.transcode.TranscodingProtobufJsonWriter;
@@ -24,7 +25,7 @@ public class CodedOutputStreamFallbackTest {
     @Test
     public void delegatesToTheTranscodingWriter() throws Exception {
         ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> expected = TranscodingProtobufJsonWriter.newBuilder().withTypeRegistry(TestSupport.TYPE_REGISTRY).build();
-        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> fallback = new CodedOutputStreamProtobufJsonWriter(TestSupport.TYPE_REGISTRY, false);
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> fallback = new CodedOutputStreamProtobufJsonWriter(TestSupport.TYPE_REGISTRY, UnresolvedAny.FAIL, false);
         assertSameOutput(expected, fallback);
     }
 
@@ -37,7 +38,7 @@ public class CodedOutputStreamFallbackTest {
                 .withMaxStringLength(5)
                 .withMaxSize(400)
                 .build();
-        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> fallback = new FilteringCodedOutputStreamProtobufJsonWriter(TestSupport.TYPE_REGISTRY, expected.getFilter(), false);
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> fallback = new FilteringCodedOutputStreamProtobufJsonWriter(TestSupport.TYPE_REGISTRY, expected.getFilter(), UnresolvedAny.FAIL, false);
         assertSameOutput(expected, fallback);
     }
 

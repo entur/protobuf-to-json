@@ -46,4 +46,25 @@ class StarMultiPathItem extends PathItem {
         }
         return any;
     }
+
+    @Override
+    FilterType getTypeWithin(String[] excluded) {
+        // the wildcard also matches the fields which are not listed
+        FilterType type = any.getStrongestType();
+        for (int i = 0; i < fieldNames.length; i++) {
+            if (!contains(excluded, fieldNames[i])) {
+                type = FilterType.strongest(type, next[i].getStrongestType());
+            }
+        }
+        return type;
+    }
+
+    @Override
+    FilterType getStrongestType() {
+        FilterType type = any.getStrongestType();
+        for (PathItem item : next) {
+            type = FilterType.strongest(type, item.getStrongestType());
+        }
+        return type;
+    }
 }

@@ -4,6 +4,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.plan.FilteredJsonValues;
 import no.entur.protobuf.json.plan.MessagePlan;
@@ -29,18 +30,23 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
     private final boolean streaming;
 
     protected FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter) {
-        this(typeRegistry, filter, JsonCodedOutputStreamFactory.isAvailable());
+        this(typeRegistry, filter, UnresolvedAny.FAIL);
+    }
+
+    protected FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny) {
+        this(typeRegistry, filter, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable());
     }
 
     /**
-     * @param typeRegistry types for resolving google.protobuf.Any
-     * @param filter       filter
-     * @param streaming    false to delegate to the transcoding writer
+     * @param typeRegistry  types for resolving google.protobuf.Any
+     * @param filter        filter
+     * @param unresolvedAny how to write google.protobuf.Any values of types which are not in the registry
+     * @param streaming     false to delegate to the transcoding writer
      */
 
-    FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, boolean streaming) {
+    FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny, boolean streaming) {
         this.filter = filter;
-        this.transcoder = new FilteringTranscodingProtobufJsonWriter(plans, typeRegistry, filter);
+        this.transcoder = new FilteringTranscodingProtobufJsonWriter(plans, typeRegistry, filter, unresolvedAny);
         this.streaming = streaming;
     }
 

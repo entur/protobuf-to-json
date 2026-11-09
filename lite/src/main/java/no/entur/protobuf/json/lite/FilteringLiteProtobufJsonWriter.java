@@ -10,6 +10,7 @@ import com.google.protobuf.FieldMask;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.ListValue;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.MessageLiteOrBuilder;
@@ -20,6 +21,7 @@ import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 import no.entur.protobuf.json.ProtobufJsonWriter;
+import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonTimes;
 import no.entur.protobuf.json.path.FilterType;
@@ -27,6 +29,7 @@ import no.entur.protobuf.json.path.FilterType;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@linkplain LiteProtobufJsonWriter} with filtering, like json-log-filter:
@@ -49,10 +52,16 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
     private final LiteMessagePlan.Plans plans = new LiteMessagePlan.Plans();
     private final Map<String, MessageLite> anyTypes;
     private final JsonFilter filter;
+    private final UnresolvedAny unresolvedAny;
 
     protected FilteringLiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, JsonFilter filter) {
+        this(anyTypes, filter, UnresolvedAny.FAIL);
+    }
+
+    protected FilteringLiteProtobufJsonWriter(Map<String, MessageLite> anyTypes, JsonFilter filter, UnresolvedAny unresolvedAny) {
         this.anyTypes = anyTypes;
         this.filter = filter;
+        this.unresolvedAny = Objects.requireNonNull(unresolvedAny, "unresolvedAny");
     }
 
     public JsonFilter getFilter() {
@@ -430,25 +439,45 @@ public class FilteringLiteProtobufJsonWriter implements ProtobufJsonWriter<Messa
             values.endObject();
             return true;
         }
-        MessageLite content = LiteJsonValues.parse(LiteProtobufJsonWriter.findType(anyTypes, typeUrl), any.getValue());
-        LiteMessagePlan plan = plans.get(content.getClass());
-        if (plan.wellKnownType != null) {
-            if (!values.startObject(name, nameSize)) {
-                return false;
-            }
-            boolean writing = writeTypeUrl(values, typeUrl, anonymize);
-            if (writing) {
-                FilterType type = anonymize ? FilterType.ANON : values.match(LiteProtobufJsonWriter.VALUE_NAME);
-                int valueNameSize = values.getNameSize(LiteProtobufJsonWriter.VALUE_NAME);
-                if (type == FilterType.PRUNE) {
-                    writing = values.writePruned(LiteProtobufJsonWriter.VALUE_NAME, valueNameSize);
-                } else {
-                    writing = writeWellKnown(plan.wellKnownType, content, values, LiteProtobufJsonWriter.VALUE_NAME, valueNameSize, type == FilterType.ANON);
-                }
-            }
-            values.endObject();
-            return writing;
+        MessageLite prototype = LiteProtobufJsonWriter.findType(anyTypes, typeUrl);
+        if (prototype == null && unresolvedAny == UnresolvedAny.FAIL) {
+            throw new InvalidProtocolBufferException("Cannot find type for url: " + typeUrl);
         }
-        return writeMessage(content, plan, values, typeUrl, name, nameSize, anonymize);
+        MessageLite content = null;
+        LiteMessagePlan plan = null;
+        if (prototype != null) {
+            content = LiteJsonValues.parse(prototype, any.getValue());
+            plan = plans.get(content.getClass());
+            if (plan.wellKnownType == null) {
+                return writeMessage(content, plan, values, typeUrl, name, nameSize, anonymize);
+            }
+        }
+        // a well-known type, or an unresolved type: the type url and a value
+        if (!values.startObject(name, nameSize)) {
+            return false;
+        }
+        // paths can not match within an unresolved payload, so it is filtered if one could
+        FilterType opaque = plan == null && !anonymize ? values.matchUnresolvedAny() : null;
+        boolean writing = writeTypeUrl(values, typeUrl, anonymize);
+        if (writing) {
+            String valueName = plan != null ? LiteProtobufJsonWriter.VALUE_NAME : LiteProtobufJsonWriter.UNRESOLVED_VALUE_NAME;
+            FilterType type = anonymize ? FilterType.ANON : values.match(valueName);
+            int valueNameSize = values.getNameSize(valueName);
+            if (plan == null) {
+                type = FilterType.strongest(type, opaque);
+                if (type != null) {
+                    writing = values.writeFiltered(valueName, valueNameSize, type);
+                } else {
+                    writing = values.writeBase64(valueName, valueNameSize, any.getValue());
+                }
+            } else if (type == FilterType.PRUNE) {
+                writing = values.writePruned(valueName, valueNameSize);
+            } else {
+                // anonymized well-known values keep their structure
+                writing = writeWellKnown(plan.wellKnownType, content, values, valueName, valueNameSize, type == FilterType.ANON);
+            }
+        }
+        values.endObject();
+        return writing;
     }
 }

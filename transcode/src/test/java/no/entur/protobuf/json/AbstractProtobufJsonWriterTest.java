@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.core.JsonGenerator;
 
 import java.io.ByteArrayOutputStream;
+import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -156,6 +157,20 @@ public abstract class AbstractProtobufJsonWriterTest {
 
         InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer(), message));
         assertThat(e).hasMessageThat().contains("Cannot find type for url");
+    }
+
+    @Test
+    public void typeUrlLikeJsonFormat() throws Exception {
+        // JsonFormat ignores trailing slashes
+        Any any = Any.pack(TestAllTypesProto3.newBuilder().setOptionalInt32(1).build());
+        assertSameAsJsonFormat(TestAllTypesProto3.newBuilder().setOptionalAny(any.toBuilder().setTypeUrl(any.getTypeUrl() + "/")).build());
+        assertSameAsJsonFormat(Any.pack(Duration.newBuilder().setSeconds(1).build()).toBuilder().setTypeUrl("/google.protobuf.Duration//").build());
+
+        for (String invalid : List.of("invalid", "type.googleapis.com/", "/", "")) {
+            Any value = Any.newBuilder().setTypeUrl(invalid).setValue(ByteString.copyFrom(new byte[]{1})).build();
+            InvalidProtocolBufferException e = assertThrows(InvalidProtocolBufferException.class, () -> TestSupport.writeBytes(writer(), value));
+            assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
+        }
     }
 
     @Test
