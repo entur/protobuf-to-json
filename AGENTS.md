@@ -39,6 +39,10 @@ written during their build by `PayloadFiles`, which exec-maven-plugin runs with 
 # a single module and what it depends on
 ./mvnw verify -pl transcode -am
 
+# with the oldest supported protobuf version, as CI does (the stream writer delegates to transcoding before 4.32,
+# which its tests do not expect)
+./mvnw verify -pl transcode,accessor,lite,utility -am -Dprotobuf.version=4.27.5
+
 # as the release workflow does: sources and javadoc jars, deployed to target/staging-deploy
 ./mvnw deploy -Ppublication
 
@@ -75,3 +79,5 @@ java -jar benchmarks/benchmark-full/target/benchmarks.jar -prof gc
   failures fall back to transcoding, and are only logged at fine
 - the full writers write strings with `JsonValues.writeString`, which copies short strings to a (per thread) `char[]`:
   Jackson 3 writes short `String`s one `charAt` at a time, which is up to a third slower
+- the published modules support protobuf 4.27 and later, which CI checks; use newer protobuf APIs by reflection, with a
+  fallback (see `JsonEnumValueNames`), so that main code compiles and runs with the oldest supported version

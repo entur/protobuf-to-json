@@ -38,8 +38,9 @@ import java.util.List;
  * helpers (e.g. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
  * messages optimized for code size. Together they have packed and repeated fields, maps written by the runtime, strings,
  * bytes, 64-bit integers, doubles, bools, nested and well-known messages, and unknown fields (including a group).
- * A probe the transcoding writers cannot write with the protobuf version at runtime is skipped: the map probe
- * (google.protobuf.Struct, whose values have an enum field) with protobuf-java before 4.36.
+ * No probe is skipped: the transcoding writers write all of them with every supported protobuf version, also the map probe
+ * (google.protobuf.Struct, whose values have an enum field) without the custom enum names of protobuf-java-util 4.36.
+ * So a probe which a sink fails on, or writes differently, always fails the check.
  * <br><br>
  * The check runs once, the first time a stream writer is created.
  */
@@ -132,13 +133,11 @@ final class CodedOutputStreamConventions {
      *
      * @param probe   the probe, of which the binary form is transcoded
      * @param message the message the sinks write: the probe, or a message which writes the same fields
-     * @return false if the transcoding writers cannot write the probe with this protobuf version, so that there is
-     * nothing to compare with (the writers fail for such messages anyway, when writing them)
      * @throws IllegalStateException if a sink fails or writes different JSON
      * @throws IOException           if transcoding fails
      */
 
-    static boolean verify(Message probe, Message message) throws IOException {
+    static void verify(Message probe, Message message) throws IOException {
         Plans plans = new Plans();
         MessagePlan plan = plans.get(probe.getDescriptorForType());
         byte[] bytes = probe.toByteArray();
@@ -146,22 +145,13 @@ final class CodedOutputStreamConventions {
         // the transcoders write the probes as regular messages, like the sinks do
         TranscodingProtobufJsonWriter transcoder = new TranscodingProtobufJsonWriter(plans, TYPE_REGISTRY);
         FilteringTranscodingProtobufJsonWriter filteringTranscoder = new FilteringTranscodingProtobufJsonWriter(plans, TYPE_REGISTRY, FILTER);
-        String expected;
-        String expectedFiltered;
-        try {
-            expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, generator, null));
-            expectedFiltered = write(generator -> filteringTranscoder.writeMessage(bytes, 0, bytes.length, plan, new FilteredJsonValues(FILTER, generator), null, null, 0, false));
-        } catch (LinkageError e) {
-            // i.e. enum values (google.protobuf.Value has one) need JsonEnumvalueOptionsProto of protobuf-java-util 4.36,
-            // which is missing from older versions, and whose generated code fails with older protobuf-java versions
-            return false;
-        }
+        String expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, generator, null));
+        String expectedFiltered = write(generator -> filteringTranscoder.writeMessage(bytes, 0, bytes.length, plan, new FilteredJsonValues(FILTER, generator), null, null, 0, false));
 
         compare(message, CodedOutputStreamJsonSink.class, expected,
                 generator -> new CodedOutputStreamJsonSink(plans, transcoder, generator).write(message));
         compare(message, FilteringCodedOutputStreamJsonSink.class, expectedFiltered,
                 generator -> new FilteringCodedOutputStreamJsonSink(plans, filteringTranscoder, new FilteredJsonValues(FILTER, generator)).write(message));
-        return true;
     }
 
     private static void compare(Message message, Class<?> sink, String expected, Write write) throws IOException {

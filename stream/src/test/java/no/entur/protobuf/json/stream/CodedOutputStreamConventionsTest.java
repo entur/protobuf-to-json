@@ -38,8 +38,8 @@ public class CodedOutputStreamConventionsTest {
     @Test
     public void writesTheProbesOfThisProtobufVersion() throws Exception {
         for (Message probe : CodedOutputStreamConventions.probes()) {
-            assertThat(CodedOutputStreamConventions.verify(probe, probe)).isTrue();
-            assertThat(CodedOutputStreamConventions.verify(probe, DynamicMessage.parseFrom(probe.getDescriptorForType(), probe.toByteString()))).isTrue();
+            CodedOutputStreamConventions.verify(probe, probe);
+            CodedOutputStreamConventions.verify(probe, DynamicMessage.parseFrom(probe.getDescriptorForType(), probe.toByteString()));
         }
     }
 
@@ -210,7 +210,7 @@ public class CodedOutputStreamConventionsTest {
     }
 
     private static void assertAccepted(Message probe, Writer writer) throws Exception {
-        assertThat(CodedOutputStreamConventions.verify(probe, message(probe, writer))).isTrue();
+        CodedOutputStreamConventions.verify(probe, message(probe, writer));
     }
 
     private static void assertRejected(Message probe, Writer writer) {
