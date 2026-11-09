@@ -24,9 +24,9 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Messages for warming up a writer for message types: every field set, with values like those of real messages (i.e.
+ * Messages for warming up a writer for message types: every field set, with values like those of real messages (e.g.
  * strings of some length, numbers of several digits), repeated fields and maps with two values, and the fields of message
- * types filled the same way. A message type which is already being filled (i.e. of a recursive message type) is left out,
+ * types filled the same way. A message type which is already being filled (e.g. of a recursive message type) is left out,
  * and so are google.protobuf.Any values, as their types might not be resolvable.
  * <br><br>
  * One message per member of the largest oneof (up to 32), so that every member is set in one of them.

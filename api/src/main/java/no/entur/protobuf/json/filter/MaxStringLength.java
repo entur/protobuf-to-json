@@ -3,7 +3,7 @@ package no.entur.protobuf.json.filter;
 /**
  * Truncation of long string values, as in json-log-filter: a string is cut after {@code maxStringLength} UTF-16 characters
  * (one less if that would split a surrogate pair), and the truncate message and the number of removed characters are appended,
- * i.e. {@code "abc... + 17"}. Strings are only truncated if that makes them shorter, i.e. if the number of removed characters
+ * e.g. {@code "abc... + 17"}. Strings are only truncated if that makes them shorter, i.e. if the number of removed characters
  * is larger than the length of the truncate message plus the number of digits.
  */
 

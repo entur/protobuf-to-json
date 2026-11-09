@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * How fast the lite writer writes to a byte-based JSON generator, depending on whether it has also written to a character-based
- * generator (i.e. with writeAsString) in the same JVM: the JIT compiles the writer for the kinds of generators it has written to.
+ * generator (e.g. with writeAsString) in the same JVM: the JIT compiles the writer for the kinds of generators it has written to.
  */
 
 @State(Scope.Benchmark)

@@ -55,7 +55,7 @@ import java.util.Set;
  * (and extensions) are skipped, like JsonFormat does.
  * <br><br>
  * To never write duplicate JSON keys, fields must appear in increasing field number order, like protobuf
- * serializes them. A field which appears again after a higher field number (i.e. in the unknown fields)
+ * serializes them. A field which appears again after a higher field number (e.g. in the unknown fields)
  * is skipped.
  * <br><br>
  * Differences from JsonFormat:
@@ -344,7 +344,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
 
     /**
      * Write a map entry. Entries with a key already written are skipped, so that no JSON key is written twice
-     * (generated messages never have duplicate keys, but i.e. a {@linkplain com.google.protobuf.DynamicMessage} can).
+     * (generated messages never have duplicate keys, but e.g. a {@linkplain com.google.protobuf.DynamicMessage} can).
      *
      * @param keys keys already written for the map field
      * @return whether the object has been started
@@ -410,7 +410,7 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
     }
 
     /**
-     * Write the default value of a field, i.e. for map entries without value.
+     * Write the default value of a field, e.g. for map entries without value.
      */
 
     public void writeDefault(FieldInfo field, JsonGenerator generator) throws IOException {
@@ -572,8 +572,8 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
     /**
      * Type name of a type url, the same as JsonFormat: the last part, ignoring trailing slashes.
      *
-     * @param typeUrl type url, i.e. type.googleapis.com/google.protobuf.Duration
-     * @return type name, i.e. google.protobuf.Duration
+     * @param typeUrl type url, e.g. type.googleapis.com/google.protobuf.Duration
+     * @return type name, e.g. google.protobuf.Duration
      * @throws InvalidProtocolBufferException if the type url has no slash, other than trailing slashes
      */
 

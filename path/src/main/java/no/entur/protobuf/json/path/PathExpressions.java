@@ -6,7 +6,7 @@ import java.util.Collection;
  * Path expression syntax:
  * <ul>
  *     <li>absolute paths: {@code $.a.b.c}</li>
- *     <li>{@code *} as a whole segment matches any field name, i.e. {@code $.a.*.c}</li>
+ *     <li>{@code *} as a whole segment matches any field name, e.g. {@code $.a.*.c}</li>
  *     <li>any-paths match a field name at any depth: {@code $..a}, without wildcards</li>
  * </ul>
  * Arrays are transparent, so {@code $.items.price} matches {@code price} in every object of the {@code items} array.

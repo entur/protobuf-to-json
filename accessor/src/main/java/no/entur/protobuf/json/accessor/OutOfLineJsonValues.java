@@ -13,7 +13,7 @@ import java.lang.reflect.Modifier;
  * Defines a class with the same static methods as {@linkplain AccessorJsonValues}, which the generated writers call, so that
  * the JIT compiles the writing of each kind of value once, rather than inlining it into the code of every message type.
  * <br><br>
- * Inlined into the generated code, the writing of values (i.e. Jackson's string encoding) makes the compiled code of a
+ * Inlined into the generated code, the writing of values (e.g. Jackson's string encoding) makes the compiled code of a
  * message type with many fields so large that the JIT stops inlining before reaching the end, leaving even the accessors
  * as calls, and optimizes the rest less well. The methods of the defined class forward to {@linkplain AccessorJsonValues},
  * and are padded with no-op instructions to more than the size of methods the JIT inlines ({@code -XX:FreqInlineSize},

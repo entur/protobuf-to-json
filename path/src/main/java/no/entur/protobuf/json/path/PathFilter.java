@@ -81,7 +81,7 @@ public final class PathFilter {
     }
 
     /**
-     * Whether there are absolute paths, i.e. {@code $.a.b} or {@code $.a.*.b}.
+     * Whether there are absolute paths, e.g. {@code $.a.b} or {@code $.a.*.b}.
      *
      * @return true if there are absolute paths
      */
@@ -91,7 +91,7 @@ public final class PathFilter {
     }
 
     /**
-     * Whether there are any-paths, i.e. {@code $..b}.
+     * Whether there are any-paths, e.g. {@code $..b}.
      *
      * @return true if there are any-paths
      */

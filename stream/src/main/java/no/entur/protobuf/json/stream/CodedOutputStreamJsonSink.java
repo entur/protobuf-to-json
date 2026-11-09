@@ -26,14 +26,14 @@ import java.util.Set;
  * <br><br>
  * Values arrive in one of these ways:
  * <ul>
- *     <li>tagged, i.e. writeInt32(fieldNumber, value) - generated code for regular fields</li>
- *     <li>a tag, then an untagged value, i.e. writeTag(fieldNumber, wireType) + writeInt32NoTag(value)
+ *     <li>tagged, e.g. writeInt32(fieldNumber, value) - generated code for regular fields</li>
+ *     <li>a tag, then an untagged value, e.g. writeTag(fieldNumber, wireType) + writeInt32NoTag(value)
  *     - map entry keys and values, extensions</li>
  *     <li>packed: a length-delimited tag, the length in bytes, then untagged values - packed repeated fields</li>
  *     <li>map entries: a length-delimited tag, the length in bytes, then key and value as fields 1 and 2</li>
  *     <li>groups: start group tag, fields, end group tag</li>
  * </ul>
- * Some type information is lost on the way (i.e. sint64 values arrive zigzag-encoded via writeUInt64, floats as
+ * Some type information is lost on the way (e.g. sint64 values arrive zigzag-encoded via writeUInt64, floats as
  * raw bits via writeFixed32); the field descriptors are used to restore it.
  * <br><br>
  * Like {@linkplain TranscodingProtobufJsonWriter}, fields are expected in increasing field number order, unknown fields
@@ -721,7 +721,7 @@ final class CodedOutputStreamJsonSink implements CodedOutputStreamSink {
 
     // ---- raw bytes ----
     // Not used by protobuf for fields: generated code and the reflection-based serialization (MessageReflection, FieldSet,
-    // UnknownFieldSet) write no field data through these methods, only user code does (i.e. via writeRawBytes or
+    // UnknownFieldSet) write no field data through these methods, only user code does (e.g. via writeRawBytes or
     // UnsafeByteOperations.unsafeWriteTo). Fail rather than drop the data silently. CodedOutputStreamConventions checks how
     // protobuf writes fields when a writer is created.
 

@@ -187,7 +187,7 @@ final class MessageWriterGenerator {
 
     /**
      * Get a lookup with full privilege access in the package of a message class, for defining a hidden class there.
-     * If the class is in another module than this library (i.e. the unnamed module of another class loader), a class which
+     * If the class is in another module than this library (e.g. the unnamed module of another class loader), a class which
      * provides one is defined in the package first.
      */
 

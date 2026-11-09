@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Utility for checking that a {@linkplain ProtobufJsonWriter} writes the same JSON as {@linkplain JsonFormat}
- * for a given message, i.e. in a unit test before opting in to use another implementation than JsonFormat:
+ * for a given message, e.g. in a unit test before opting in to use another implementation than JsonFormat:
  *
  * <pre>
  * JsonFormatComparison comparison = JsonFormatComparison.newBuilder()

@@ -56,7 +56,7 @@ public class LiteProtobufJsonWriterBenchmark {
 
     @Setup
     public void setup() {
-        // only the measured writer runs in a fork: running the others too (i.e. to check their output) changes how the JIT
+        // only the measured writer runs in a fork: running the others too (e.g. to check their output) changes how the JIT
         // compiles the reflection code they share, see the tests for their output
         message = LitePayloads.load(payload);
     }

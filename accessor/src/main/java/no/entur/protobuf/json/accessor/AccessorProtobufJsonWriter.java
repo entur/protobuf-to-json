@@ -33,7 +33,7 @@ import java.util.List;
  * package of the message (which must then be open to this library, if in a named module).
  * <br><br>
  * The output is the same as for {@linkplain TranscodingProtobufJsonWriter}, which also writes the contents of
- * google.protobuf.Any values, and messages which are not generated (i.e. {@linkplain com.google.protobuf.DynamicMessage});
+ * google.protobuf.Any values, and messages which are not generated (e.g. {@linkplain com.google.protobuf.DynamicMessage});
  * see it for differences from JsonFormat.
  * <br><br>
  * Use the {@linkplain #newBuilder() builder} for filtering (anonymize and prune paths, max string length and max size);

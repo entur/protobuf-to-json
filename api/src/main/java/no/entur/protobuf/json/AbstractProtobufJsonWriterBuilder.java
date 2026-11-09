@@ -16,7 +16,7 @@ import no.entur.protobuf.json.filter.JsonStrings;
  *     <li>max string length: truncate long string values to {@code "<start>... + <number of removed characters>"}</li>
  *     <li>max size: stop writing at the first value which does not fit, and close the open objects and arrays</li>
  * </ul>
- * Path expressions refer to the JSON field names, i.e. {@code $.customer.email}, {@code $.*.email}
+ * Path expressions refer to the JSON field names, e.g. {@code $.customer.email}, {@code $.*.email}
  * or {@code $..email} (any depth). There is no slash notation. See {@linkplain no.entur.protobuf.json.path.PathExpressions}.
  *
  * @param <B> builder type
@@ -59,6 +59,8 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
 
     /**
      * Max size of the JSON output, in bytes when writing to an output stream, otherwise in characters.
+     * {@linkplain ProtobufJsonWriter#writeAsString(Object)} counts bytes with the full protobuf writers, and characters with the
+     * lite writer.
      * The output is cut at the first value which does not fit, and the open objects and arrays are closed;
      * {@linkplain ProtobufJsonWriter#write(Object, Object)} then returns false.
      *
