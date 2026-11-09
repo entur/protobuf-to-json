@@ -71,4 +71,33 @@ public class AbstractProtobufJsonWriterBuilderTest {
         assertThrows(IllegalArgumentException.class, () -> new Builder().withPrunePaths("$.a[0]").build());
         assertThrows(IllegalArgumentException.class, () -> new Builder().withUnresolvedAny(null));
     }
+
+    @Test
+    public void invalidReplacements() {
+        // written as is, so the output would not be JSON
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizeRawJsonValue("removed"));
+        assertThat(e).hasMessageThat().isEqualTo("Expected a JSON value as the anonymize replacement, got 'removed'");
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withPruneRawJsonValue("\"a\" \"b\""));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizeRawJsonValue(null));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withPruneRawJsonValue(""));
+
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withAnonymizeMessage(null));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withPruneMessage(null));
+        assertThrows(IllegalArgumentException.class, () -> new Builder().withTruncateMessage(null));
+
+        assertThrows(IllegalArgumentException.class, () -> new JsonFilter(-1, 10, null, null, "{", "null", "..."));
+        assertThrows(IllegalArgumentException.class, () -> new JsonFilter(-1, 10, null, null, "null", "null", null));
+    }
+
+    @Test
+    public void rawReplacements() {
+        JsonFilter filter = new Builder()
+                .withMaxSize(10)
+                .withAnonymizeRawJsonValue("{\"masked\": true}")
+                .withPruneRawJsonValue("[]")
+                .build();
+
+        assertThat(filter.getAnonymizeRawJsonValue()).isEqualTo("{\"masked\": true}");
+        assertThat(filter.getPruneRawJsonValue()).isEqualTo("[]");
+    }
 }

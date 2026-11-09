@@ -7,6 +7,7 @@ import java.util.List;
 
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.JsonStrings;
+import no.entur.protobuf.json.filter.JsonSyntax;
 
 /**
  * Builder with the filter options, as in json-log-filter:
@@ -139,35 +140,43 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     }
 
     /**
-     * Replacement for anonymized values, written as a JSON string.
+     * Replacement for anonymized values, written as a JSON string. The default is {@code "*"}.
      *
-     * @param message message
+     * @param message message, not null
      * @return this builder
      */
 
     public B withAnonymizeMessage(String message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Expected an anonymize message");
+        }
         return withAnonymizeRawJsonValue(JsonStrings.quote(message));
     }
 
     /**
-     * Replacement for pruned values, written as a JSON string.
+     * Replacement for pruned values, written as a JSON string. The default is {@code "[removed]"}.
      *
-     * @param message message
+     * @param message message, not null
      * @return this builder
      */
 
     public B withPruneMessage(String message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Expected a prune message");
+        }
         return withPruneRawJsonValue(JsonStrings.quote(message));
     }
 
     /**
      * Replacement for anonymized values, written as is.
      *
-     * @param raw JSON value, i.e. {@code "\"*\""} or {@code "null"}
+     * @param raw a single JSON value, for example {@code "\"*\""} or {@code "null"}
      * @return this builder
+     * @throws IllegalArgumentException if not a single JSON value
      */
 
     public B withAnonymizeRawJsonValue(String raw) {
+        JsonSyntax.requireReplacement(raw, "anonymize");
         this.anonymizeRawJsonValue = raw;
         return self();
     }
@@ -175,23 +184,29 @@ public abstract class AbstractProtobufJsonWriterBuilder<B extends AbstractProtob
     /**
      * Replacement for pruned values, written as is.
      *
-     * @param raw JSON value, i.e. {@code "\"[removed]\""} or {@code "null"}
+     * @param raw a single JSON value, for example {@code "\"[removed]\""} or {@code "null"}
      * @return this builder
+     * @throws IllegalArgumentException if not a single JSON value
      */
 
     public B withPruneRawJsonValue(String raw) {
+        JsonSyntax.requireReplacement(raw, "prune");
         this.pruneRawJsonValue = raw;
         return self();
     }
 
     /**
-     * Text between the start of a truncated string and the number of removed characters.
+     * Text between the start of a truncated string and the number of removed characters, escaped as needed. The default is
+     * {@code "... + "}, which truncates to {@code "<start>... + <number of removed characters>"}.
      *
-     * @param message message, i.e. {@code "... + "}
+     * @param message message, not null
      * @return this builder
      */
 
     public B withTruncateMessage(String message) {
+        if (message == null) {
+            throw new IllegalArgumentException("Expected a truncate message");
+        }
         this.truncateMessage = message;
         return self();
     }

@@ -162,7 +162,9 @@ Build a writer with the filters you want:
 | `withPrunePaths(...)`, `withPruneKeys(...)` | replace the whole value with `"[removed]"`; the value is not read |
 | `withMaxStringLength(n)` | truncate text and bytes values longer than `n` characters to `"<first n characters>... + <number of removed characters>"` |
 | `withMaxSize(n)` | stop writing at the first value which does not fit within `n` bytes (characters, for character-based generators), then close the open objects and arrays |
-| `withAnonymizeMessage(...)`, `withPruneMessage(...)`, `withTruncateMessage(...)` | replacement texts |
+| `withAnonymizeMessage(...)`, `withPruneMessage(...)` | replacement texts, written as JSON strings (by default `"*"` and `"[removed]"`) |
+| `withAnonymizeRawJsonValue(...)`, `withPruneRawJsonValue(...)` | replacements written as is, for example `null`; must be a single JSON value |
+| `withTruncateMessage(...)` | the text between the start of a truncated string and the number of removed characters (by default `... + `) |
 
 ### Paths:
 
