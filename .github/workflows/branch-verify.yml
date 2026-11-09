@@ -4,6 +4,7 @@ on:
     types:
       - synchronize
       - opened
+      - reopened
 
 jobs:
   validate-maven-build:
