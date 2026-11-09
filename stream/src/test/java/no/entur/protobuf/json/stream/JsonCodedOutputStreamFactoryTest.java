@@ -23,6 +23,12 @@ public class JsonCodedOutputStreamFactoryTest {
     }
 
     @Test
+    public void isAvailableWithThisProtobufVersion() {
+        // otherwise the writers delegate to the transcoding writers, and the tests of the stream writers test those instead
+        assertThat(JsonCodedOutputStreamFactory.isAvailable()).isTrue();
+    }
+
+    @Test
     public void forwardsWritesToTheSink() throws Exception {
         List<String> calls = new ArrayList<>();
         CodedOutputStreamSink sink = (CodedOutputStreamSink) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {CodedOutputStreamSink.class},

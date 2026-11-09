@@ -9,14 +9,14 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class ExpressionNode {
+class ExpressionNode {
 
     private String path;
     private int index;
     private FilterType filterType;
     private List<ExpressionNode> children = new ArrayList<>();
 
-    public ExpressionNode find(String path) {
+    ExpressionNode find(String path) {
         for (ExpressionNode expressionNode : children) {
             if (expressionNode.path.equals(path)) {
                 return expressionNode;
@@ -31,7 +31,7 @@ public class ExpressionNode {
      * @param node node to merge, it is copied and not modified
      */
 
-    public void append(ExpressionNode node) {
+    void append(ExpressionNode node) {
         if (filterType != null) {
             // this node is filtered as a whole, which covers anything below it
             return;
@@ -56,12 +56,12 @@ public class ExpressionNode {
      * @param type filter type
      */
 
-    public void cover(FilterType type) {
+    void cover(FilterType type) {
         this.filterType = FilterType.strongest(this.filterType, type);
         this.children.clear();
     }
 
-    public ExpressionNode copy() {
+    ExpressionNode copy() {
         ExpressionNode copy = new ExpressionNode();
         copy.path = path;
         copy.index = index;
@@ -72,7 +72,7 @@ public class ExpressionNode {
         return copy;
     }
 
-    public String print() {
+    String print() {
         StringBuilder builder = new StringBuilder();
 
         print(builder);
@@ -80,7 +80,7 @@ public class ExpressionNode {
         return builder.toString().trim();
     }
 
-    public void print(StringBuilder builder) {
+    void print(StringBuilder builder) {
         for (int i = 0; i < index; i++) {
             builder.append(' ');
         }
@@ -99,43 +99,43 @@ public class ExpressionNode {
         }
     }
 
-    public boolean hasFilterType() {
+    boolean hasFilterType() {
         return filterType != null;
     }
 
-    public void add(ExpressionNode node) {
+    void add(ExpressionNode node) {
         children.add(node);
     }
 
-    public String getPath() {
+    String getPath() {
         return path;
     }
 
-    public void setPath(String path) {
+    void setPath(String path) {
         this.path = path;
     }
 
-    public int getIndex() {
+    int getIndex() {
         return index;
     }
 
-    public void setIndex(int index) {
+    void setIndex(int index) {
         this.index = index;
     }
 
-    public FilterType getFilterType() {
+    FilterType getFilterType() {
         return filterType;
     }
 
-    public void setFilterType(FilterType filterType) {
+    void setFilterType(FilterType filterType) {
         this.filterType = filterType;
     }
 
-    public List<ExpressionNode> getChildren() {
+    List<ExpressionNode> getChildren() {
         return children;
     }
 
-    public void setChildren(List<ExpressionNode> children) {
+    void setChildren(List<ExpressionNode> children) {
         this.children = children;
     }
 }

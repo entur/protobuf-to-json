@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package moduletest.full;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "no.entur.protobuf.json.moduletest.full.messages";
+option java_multiple_files = true;
+
+message Customer {
+  string name = 1;
+  string email = 2;
+  int64 id = 3;
+  repeated string tags = 4;
+  map<string, int32> scores = 5;
+  Address address = 6;
+  google.protobuf.Timestamp created = 7;
+  Status status = 8;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+}

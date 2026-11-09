@@ -109,6 +109,22 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <executions>
                     <execution>
+                        <!-- Android: older tools fail on a module-info.class at the root of a jar, so it is only in
+                             META-INF/versions/9. target/classes keeps it at the root, for builds which compile the other
+                             modules without packaging. -->
+                        <id>default-jar</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                            </excludes>
+                            <archive>
+                                <manifestEntries>
+                                    <Multi-Release>true</Multi-Release>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>test-jar</id>
                         <goals>
                             <goal>test-jar</goal>
@@ -119,6 +135,26 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <!-- the module descriptor, also for Java 9 in META-INF/versions/9 (see the jar plugin) -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>module-descriptor-java-9</id>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <release>9</release>
+                            <multiReleaseOutput>true</multiReleaseOutput>
+                            <includes>
+                                <include>module-info.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

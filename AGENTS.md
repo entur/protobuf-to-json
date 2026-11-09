@@ -19,6 +19,8 @@ utility/              JsonFormatComparison and the JsonFormat writer (Jackson 3)
 test-support/         Generated full test messages, RandomMessages, BenchmarkPayloads, ProtobufJacksonTestMessages, and
                       PayloadFiles, which writes test messages as files for the lite modules (not published)
 benchmarks/           JMH benchmarks, Java 25 (benchmark-full, benchmark-lite; not published), see benchmarks/README.md
+module-tests/         Named application modules (module-test-full, module-test-lite; not published) which write messages with
+                      the writers on the module path; exec-maven-plugin runs them in the integration-test phase
 support/protobuf/     Test .proto files: protobuf conformance test messages, curioswitch protobuf-jackson test messages
 .github/              GitHub Actions: branch verification, CodeQL, Maven Central releases (entur/gha-maven-central), dependabot
 ```
@@ -55,6 +57,10 @@ java -jar benchmarks/benchmark-full/target/benchmarks.jar -prof gc
   unfiltered output (see `AbstractFilteringProtobufJsonWriterTest`); shared abstract tests live in the `transcode`
   test-jar and are extended per writer
 - path expressions are `$.a.b`, `$.a.*.b` and `$..b`; there is no slash notation
+- the published modules have module descriptors; main code compiles with `-Xlint:exports`, which must not warn (the types
+  in the public API of an exported package must be exported too). The `path`, `api` and `lite` jars have the descriptor
+  only in `META-INF/versions/9` (older Android tools fail on one at the root); `target/classes` has it at the root too, for
+  builds which do not package. Tests run on the classpath; `module-tests` checks the module path
 - max string length only applies to text and bytes, not to 64-bit integers, enum names, timestamps, durations, NaN and
   infinity (`writeUntruncated`); as the reference filter only sees JSON, the tests give it the locations of those values
   (`UntruncatedValues` in test-support, also written to the files for the lite tests)

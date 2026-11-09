@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package moduletest.lite.internal;
+
+// in a package which the application module does not export
+option java_package = "no.entur.protobuf.json.moduletest.lite.internal";
+option java_multiple_files = true;
+
+message Secret {
+  string name = 1;
+}

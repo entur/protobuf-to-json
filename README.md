@@ -46,7 +46,8 @@ Use the `accessor writer`, unless:
    another JIT, or a larger `-XX:FreqInlineSize`, it could lose about 30%
 
 The `stream` writer, in turn, depends on protobuf internals: the private constructor of `CodedOutputStream`, and which of
-its methods the generated code calls. So a protobuf upgrade can break it (it then fails when created). The `accessor` writer
+its methods the generated code calls. So a protobuf upgrade can break it; it then logs a warning and delegates to the
+transcoding writer, which writes the same JSON more slowly. The `accessor` writer
 only depends on the names of the accessors, which are part of protobuf's generated API. The transcoding writer only uses
 public protobuf APIs and runs on Java 17, but is the slowest of the three.
 
@@ -276,7 +277,30 @@ Group id is `no.entur.protobuf-to-json`.
 | `utility` | `protobuf-to-json-utility` | `JsonFormatComparison` for checking the output against JsonFormat, and a writer which uses JsonFormat | 3 | 17 |
 | `test-support` | not published | the test messages, random messages and the benchmark payloads, also as files for the lite modules | - | 17 |
 | `benchmarks` | not published | JMH benchmarks, see [benchmarks](benchmarks/README.md) | 2 and 3 | 25 |
+| `module-tests` | not published | named application modules which write messages with the writers on the module path | 2 and 3 | 25 |
 
+## Supported API
+
+Use the writer classes and their builders (`AbstractProtobufJsonWriterBuilder`). Some other types are public only because
+the writer modules and the generated writers use them, so they are not application API and may change between releases:
+the `plan` package, the `no.entur.protobuf.json.filter` package (except `JsonFilter`, which the builders return and the
+filtering writers take), `MessageWriters`, `MessageWriter` and `FilteringMessageWriter` in the accessor module, and
+`CodedOutputStreamSink` in the stream module. The path matcher implementation is not public.
+
+### Module path
+
+Require the writer module: `no.entur.protobuf.json.accessor`, `no.entur.protobuf.json.stream`,
+`no.entur.protobuf.json.transcode`, `no.entur.protobuf.json.lite` or `no.entur.protobuf.json.utility`. Then:
+
+* export the packages of the messages: protobuf's own reflection (as in `JsonFormat`), the accessor writer and the lite
+  writer read the messages through their public methods and fields. Without the export, the accessor writer transcodes
+  instead, and the lite writer fails.
+* if the message classes are loaded by another class loader than this library, the accessor writer defines its writers
+  in the packages of the messages: open those packages to `no.entur.protobuf.json.accessor`.
+
+The stream and accessor writers generate classes at runtime, which needs no further options on the module path. The
+`path`, `api` and `lite` jars have their module descriptor in `META-INF/versions/9` rather than at the root, which older
+Android tools fail on. The `module-tests` modules run named application modules with the writers on the module path.
 
 ## License
 [Apache-2.0](LICENSE.txt).

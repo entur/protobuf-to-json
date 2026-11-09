@@ -20,19 +20,10 @@ public class PathFilterTest {
      */
 
     private static FilterType match(PathFilter filter, String... names) {
-        PathItem item = filter.getPathItem();
+        PathMatcher matcher = filter.newMatcher();
         FilterType type = null;
         for (int i = 0; i < names.length; i++) {
-            int level = i + 1;
-            item = item.constrain(level).matchPath(level, names[i]);
-            type = null;
-            if (item.hasType()) {
-                type = item.getType();
-                item = item.constrain(level);
-            }
-            if (filter.hasAnyPaths()) {
-                type = FilterType.strongest(type, filter.getAnyPathFilters().matchPath(names[i]));
-            }
+            type = matcher.matchName(i + 1, names[i]);
             if (type != null) {
                 return i == names.length - 1 ? type : null;
             }
@@ -46,14 +37,11 @@ public class PathFilterTest {
      */
 
     private static FilterType typeWithin(PathFilter filter, List<String> names, String... fieldNames) {
-        PathItem item = filter.getPathItem();
+        PathMatcher matcher = filter.newMatcher();
         for (int i = 0; i < names.size(); i++) {
-            int level = i + 1;
-            item = item.constrain(level).matchPath(level, names.get(i));
-            assertFalse(item.hasType());
+            assertNull(matcher.matchName(i + 1, names.get(i)));
         }
-        int level = names.size() + 1;
-        return item.constrain(level).getTypeWithin(level, fieldNames);
+        return matcher.matchOpaque(names.size() + 1, fieldNames);
     }
 
     @Test
@@ -79,7 +67,7 @@ public class PathFilterTest {
         assertEquals(FilterType.ANON, typeWithin(PathFilter.create(Arrays.asList("$.x"), null), Collections.emptyList(), fields));
         assertNull(typeWithin(PathFilter.create(Arrays.asList("$.@value"), null), Collections.emptyList(), fields));
         // only at the level of the item
-        assertNull(PathFilter.create(Arrays.asList("$.a.b.x"), null).getPathItem().getTypeWithin(2, fields));
+        assertNull(PathFilter.create(Arrays.asList("$.a.b.x"), null).newMatcher().matchOpaque(2, fields));
     }
 
     @Test
@@ -95,6 +83,18 @@ public class PathFilterTest {
         assertEquals(FilterType.ANON, match(filter, "secret"));
         assertEquals(FilterType.PRUNE, match(filter, "c", "x", "d"));
         assertNull(match(filter, "c", "x", "e"));
+    }
+
+    @Test
+    public void matcherFollowsTheDocument() {
+        PathMatcher matcher = PathFilter.create(Collections.singletonList("$.a.b"), null).newMatcher();
+
+        assertNull(matcher.matchName(1, "a"));
+        assertNull(matcher.matchName(2, "x"));
+        assertEquals(FilterType.ANON, matcher.matchName(2, "b"));
+        assertNull(matcher.matchName(1, "b"));
+        assertNull(matcher.matchName(1, "a"));
+        assertEquals(FilterType.ANON, matcher.matchName(2, "b"));
     }
 
     @Test

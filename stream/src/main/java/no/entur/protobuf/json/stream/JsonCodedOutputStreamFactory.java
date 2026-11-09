@@ -16,6 +16,8 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -28,12 +30,19 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * {@linkplain CodedOutputStream} only has a private constructor. The subclass is therefore generated with the ClassFile API,
  * and defined as a hidden class in {@linkplain CodedOutputStream}'s nest ({@linkplain MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)}
  * and {@linkplain MethodHandles.Lookup.ClassOption#NESTMATE}), which allows it to invoke the private constructor.
+ * On the module path, where protobuf is another module than this library, a class which provides a lookup with full
+ * privilege access is defined in the protobuf package first (see {@linkplain #getLookup()}).
  * <br><br>
  * If the subclass cannot be generated, i.e. for an incompatible protobuf version, or if protobuf is loaded by a class loader
- * which cannot see this library, the writers fail when created.
+ * which cannot see this library, or if the sinks do not handle how this protobuf version writes messages (see
+ * {@linkplain CodedOutputStreamConventions}), the writers delegate to the transcoding writers, which write the same JSON
+ * (more slowly), rather than fail or drop or garble fields. This is checked once, when the first writer is created, and
+ * logged once as a warning (see {@linkplain #isAvailable()}).
  */
 
 final class JsonCodedOutputStreamFactory {
+
+    private static final Logger LOGGER = Logger.getLogger(JsonCodedOutputStreamFactory.class.getName());
 
     private static final MethodHandle CONSTRUCTOR;
     private static final Throwable FAILURE;
@@ -59,19 +68,64 @@ final class JsonCodedOutputStreamFactory {
     }
 
     /**
-     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created.
+     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created, and that the sinks handle how this protobuf
+     * version writes messages to them.
      *
      * @throws IllegalStateException if not
      */
 
     static void verify() {
+        verifyConstructor();
+        CodedOutputStreamConventions.verify();
+    }
+
+    /**
+     * Whether the stream writers can write messages themselves (see {@linkplain #verify()}). Checked once, when the first
+     * writer is created. If not, the reason is logged once as a warning, and the writers delegate to the transcoding writers.
+     *
+     * @return true if JSON-writing {@linkplain CodedOutputStream}s can be used
+     */
+
+    static boolean isAvailable() {
+        return Availability.AVAILABLE;
+    }
+
+    /**
+     * Run a check, and log a warning if it fails.
+     *
+     * @param check the check, i.e. {@linkplain #verify()}
+     * @return true if the check passed
+     */
+
+    static boolean check(Runnable check) {
+        try {
+            check.run();
+            return true;
+        } catch (RuntimeException | LinkageError e) {
+            LOGGER.log(Level.WARNING, "The CodedOutputStream writers cannot write messages with this protobuf version and class loader, "
+                    + "and delegate to the transcoding writers, which write the same JSON more slowly", e);
+            return false;
+        }
+    }
+
+    private static final class Availability {
+
+        // the convention check creates sinks, which use the constructor, so it is checked after the factory is initialized
+        private static final boolean AVAILABLE = check(JsonCodedOutputStreamFactory::verify);
+
+        private Availability() {
+        }
+    }
+
+    private static void verifyConstructor() {
         if (CONSTRUCTOR == null) {
             throw new IllegalStateException("Unable to generate a JSON-writing CodedOutputStream for this protobuf version and class loader", FAILURE);
         }
     }
 
     static CodedOutputStream create(CodedOutputStreamSink sink) {
-        verify();
+        // not verify(): the convention check creates sinks
+        verifyConstructor();
         try {
             return (CodedOutputStream) CONSTRUCTOR.invokeExact(sink);
         } catch (RuntimeException | Error e) {
@@ -138,10 +192,53 @@ final class JsonCodedOutputStreamFactory {
             throw new IllegalStateException("CodedOutputStreamSink does not implement " + required);
         }
 
-        MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(CodedOutputStream.class, MethodHandles.lookup());
-        MethodHandles.Lookup hidden = lookup.defineHiddenClass(bytes, true, MethodHandles.Lookup.ClassOption.NESTMATE);
+        MethodHandles.Lookup hidden = getLookup().defineHiddenClass(bytes, true, MethodHandles.Lookup.ClassOption.NESTMATE);
         return hidden.findConstructor(hidden.lookupClass(), MethodType.methodType(void.class, CodedOutputStreamSink.class))
                 .asType(MethodType.methodType(CodedOutputStream.class, CodedOutputStreamSink.class));
+    }
+
+    /**
+     * Get a lookup on {@linkplain CodedOutputStream} with full privilege access, which defining a nestmate hidden class needs.
+     * On the classpath, {@linkplain MethodHandles#privateLookupIn(Class, MethodHandles.Lookup)} gives one. On the module path,
+     * protobuf is another module than this library, so it gives one without module access; then a class which provides a
+     * lookup is defined in the protobuf package, which only needs package access, and its lookup is used instead.
+     *
+     * @return lookup on {@linkplain CodedOutputStream} with full privilege access
+     */
+
+    static MethodHandles.Lookup getLookup() throws ReflectiveOperationException {
+        MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(CodedOutputStream.class, MethodHandles.lookup());
+        if (lookup.hasFullPrivilegeAccess()) {
+            return lookup;
+        }
+        String name = CodedOutputStream.class.getPackageName() + ".JsonCodedOutputStreamLookup";
+        Class<?> provider;
+        try {
+            provider = Class.forName(name, false, CodedOutputStream.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            // package-private, so it only provides lookups to code which already has access to the package
+            ClassDesc lookupDesc = MethodHandles.Lookup.class.describeConstable().orElseThrow();
+            byte[] bytes = ClassFile.of().build(ClassDesc.of(name), builder -> builder
+                    .withFlags(ClassFile.ACC_FINAL | ClassFile.ACC_SUPER)
+                    .withMethodBody("lookup", MethodTypeDesc.of(lookupDesc), ClassFile.ACC_STATIC, code -> code
+                            .invokestatic(MethodHandles.class.describeConstable().orElseThrow(), "lookup", MethodTypeDesc.of(lookupDesc))
+                            .areturn()));
+            try {
+                provider = lookup.defineClass(bytes);
+            } catch (LinkageError duplicate) {
+                // defined concurrently
+                provider = Class.forName(name, false, CodedOutputStream.class.getClassLoader());
+            }
+        }
+        MethodHandles.Lookup full;
+        try {
+            full = (MethodHandles.Lookup) lookup.findStatic(provider, "lookup", MethodType.methodType(MethodHandles.Lookup.class)).invoke();
+        } catch (RuntimeException | Error e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new IllegalStateException(e);
+        }
+        return MethodHandles.privateLookupIn(CodedOutputStream.class, full);
     }
 
     private static String toDescriptor(Method method) {

@@ -13,9 +13,9 @@ import java.util.Map;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class ExpressionNodeFactory {
+class ExpressionNodeFactory {
 
-    public ExpressionNode toExpressionNode(String[] expressions, FilterType[] types) {
+    ExpressionNode toExpressionNode(String[] expressions, FilterType[] types) {
         // if the same path is both pruned and anonymized, prune takes precedence
         Map<List<String>, FilterType> map = new LinkedHashMap<>();
         for (int i = 0; i < expressions.length; i++) {
@@ -149,7 +149,7 @@ public class ExpressionNodeFactory {
         return elementPath;
     }
 
-    public ExpressionNode toExpressionNode(List<String> pathsList, List<FilterType> typesList) {
+    ExpressionNode toExpressionNode(List<String> pathsList, List<FilterType> typesList) {
         return toExpressionNode(pathsList.toArray(new String[0]), typesList.toArray(new FilterType[0]));
     }
 }

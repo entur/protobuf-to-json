@@ -17,7 +17,9 @@ import java.io.IOException;
 
 /**
  * {@linkplain CodedOutputStreamProtobufJsonWriter} with filtering (anonymize and prune paths, max string length and max size).
- * Pruned messages are not serialized at all. The output is the same as for {@linkplain FilteringTranscodingProtobufJsonWriter}.
+ * Pruned messages are not serialized at all. The output is the same as for {@linkplain FilteringTranscodingProtobufJsonWriter},
+ * to which it delegates if the stream writers cannot write messages with this protobuf version (see
+ * {@linkplain CodedOutputStreamProtobufJsonWriter}).
  */
 
 public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> {
@@ -25,15 +27,27 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
     private final Plans plans = new Plans();
     private final FilteringTranscodingProtobufJsonWriter transcoder;
     private final JsonFilter filter;
+    private final boolean streaming;
 
     protected FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter) {
         this(typeRegistry, filter, UnresolvedAny.FAIL);
     }
 
     protected FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny) {
-        JsonCodedOutputStreamFactory.verify();
+        this(typeRegistry, filter, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable());
+    }
+
+    /**
+     * @param typeRegistry  types for resolving google.protobuf.Any
+     * @param filter        filter
+     * @param unresolvedAny how to write google.protobuf.Any values of types which are not in the registry
+     * @param streaming     false to delegate to the transcoding writer
+     */
+
+    FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny, boolean streaming) {
         this.filter = filter;
         this.transcoder = new FilteringTranscodingProtobufJsonWriter(plans, typeRegistry, filter, unresolvedAny);
+        this.streaming = streaming;
     }
 
     public JsonFilter getFilter() {
@@ -42,6 +56,9 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
 
     @Override
     public boolean write(MessageOrBuilder message, JsonGenerator generator) throws IOException {
+        if (!streaming) {
+            return transcoder.write(message, generator);
+        }
         Message m;
         if (message instanceof Message msg) {
             m = msg;

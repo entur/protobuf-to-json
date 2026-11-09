@@ -6,17 +6,17 @@ import java.util.List;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class MultiPathItem extends PathItem {
+class MultiPathItem extends PathItem {
 
     private final String[] fieldNames;
 
     private final PathItem[] next;
 
-    public MultiPathItem(List<String> fieldNames, int level, PathItem parent) {
+    MultiPathItem(List<String> fieldNames, int level, PathItem parent) {
         this(fieldNames.toArray(new String[0]), level, parent);
     }
 
-    public MultiPathItem(String[] fieldNames, int level, PathItem parent) {
+    MultiPathItem(String[] fieldNames, int level, PathItem parent) {
         super(level, parent);
 
         // note: always expect two or more field names
@@ -24,12 +24,12 @@ public class MultiPathItem extends PathItem {
         this.next = new PathItem[fieldNames.length];
     }
 
-    public void setNext(PathItem next, int i) {
+    void setNext(PathItem next, int i) {
         this.next[i] = next;
     }
 
     @Override
-    public PathItem matchPath(int level, String fieldName) {
+    PathItem matchPath(int level, String fieldName) {
         if (level != this.level) {
             return this;
         }

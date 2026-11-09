@@ -6,27 +6,27 @@ package no.entur.protobuf.json.path;
  * Ported from json-log-filter (Apache-2.0).
  */
 
-public class EndPathItem extends PathItem {
+class EndPathItem extends PathItem {
 
-    public final FilterType filterType;
+    final FilterType filterType;
 
-    public EndPathItem(int level, PathItem parent, FilterType filterType) {
+    EndPathItem(int level, PathItem parent, FilterType filterType) {
         super(level, parent);
         this.filterType = filterType;
     }
 
     @Override
-    public FilterType getType() {
+    FilterType getType() {
         return filterType;
     }
 
     @Override
-    public PathItem matchPath(int level, String fieldName) {
+    PathItem matchPath(int level, String fieldName) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean hasType() {
+    boolean hasType() {
         return true;
     }
 
