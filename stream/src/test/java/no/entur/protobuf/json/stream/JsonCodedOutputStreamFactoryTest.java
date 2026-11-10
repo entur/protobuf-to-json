@@ -19,13 +19,15 @@ public class JsonCodedOutputStreamFactoryTest {
         assertThat(constructor.type().returnType()).isEqualTo(CodedOutputStream.class);
         assertThat(constructor.type().parameterList()).containsExactly(CodedOutputStreamSink.class);
 
-        JsonCodedOutputStreamFactory.verify();
+        JsonCodedOutputStreamFactory.verify(false);
+        JsonCodedOutputStreamFactory.verify(true);
     }
 
     @Test
     public void isAvailableWithThisProtobufVersion() {
         // otherwise the writers delegate to the transcoding writers, and the tests of the stream writers test those instead
-        assertThat(JsonCodedOutputStreamFactory.isAvailable()).isTrue();
+        assertThat(JsonCodedOutputStreamFactory.isAvailable(false)).isTrue();
+        assertThat(JsonCodedOutputStreamFactory.isAvailable(true)).isTrue();
     }
 
     @Test

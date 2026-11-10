@@ -11,7 +11,6 @@ import no.entur.protobuf.json.plan.MessagePlan.EnumNames;
 import no.entur.protobuf.json.plan.MessagePlan.FieldInfo;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.SerializableString;
-import tools.jackson.core.io.SerializedString;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -31,10 +30,11 @@ import java.util.Base64;
 
 public final class FilteredJsonValues {
 
-    public static final SerializableString TYPE_NAME = new SerializedString("@type");
-    public static final SerializableString VALUE_NAME = new SerializedString("value");
+    // in JsonValues, so that the unfiltered writers do not load this class
+    public static final SerializableString TYPE_NAME = JsonValues.TYPE_NAME;
+    public static final SerializableString VALUE_NAME = JsonValues.VALUE_NAME;
     /** the payload of an unresolved google.protobuf.Any */
-    public static final SerializableString UNRESOLVED_VALUE_NAME = new SerializedString("@value");
+    public static final SerializableString UNRESOLVED_VALUE_NAME = JsonValues.UNRESOLVED_VALUE_NAME;
 
     // the fields of an unresolved google.protobuf.Any, which paths match as usual
     private static final String[] UNRESOLVED_ANY_NAMES = {TYPE_NAME.getValue(), UNRESOLVED_VALUE_NAME.getValue()};

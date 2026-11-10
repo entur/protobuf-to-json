@@ -35,7 +35,7 @@ public class FilteringCodedOutputStreamProtobufJsonWriter implements ProtobufJso
     }
 
     protected FilteringCodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, JsonFilter filter, UnresolvedAny unresolvedAny) {
-        this(typeRegistry, filter, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable());
+        this(typeRegistry, filter, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable(true));
     }
 
     /**

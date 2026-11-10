@@ -33,8 +33,8 @@ import java.util.List;
  * A protobuf upgrade which writes packed fields, maps, strings, bytes or nested messages through other methods, or in
  * another order, would otherwise make the stream writers drop or garble fields silently.
  * <br><br>
- * Probe messages bundled with protobuf-java are written by both sinks, and must give the same JSON as the transcoding
- * writers, which read the binary format. The probes are written by their generated code, which calls the runtime's
+ * Probe messages bundled with protobuf-java are written by a sink, and must give the same JSON as the transcoding writers,
+ * which read the binary format. The probes are written by their generated code, which calls the runtime's
  * helpers (e.g. for maps), and as {@linkplain DynamicMessage}s, whose reflection-based serialization is also used for
  * messages optimized for code size. Together they have packed and repeated fields, maps written by the runtime, strings,
  * bytes, 64-bit integers, doubles, bools, nested and well-known messages, and unknown fields (including a group).
@@ -42,39 +42,65 @@ import java.util.List;
  * (google.protobuf.Struct, whose values have an enum field) without the custom enum names of protobuf-java-util 4.36.
  * So a probe which a sink fails on, or writes differently, always fails the check.
  * <br><br>
- * The check runs once, the first time a stream writer is created.
+ * The check runs once for each sink, the first time a writer which uses it is created: the unfiltered writers only load and
+ * check the unfiltered sink, and the filtering writers only the filtering sink (and the filter classes).
  */
 
 final class CodedOutputStreamConventions {
 
     private static final JsonFormat.TypeRegistry TYPE_REGISTRY = JsonFormat.TypeRegistry.getEmptyTypeRegistry();
 
-    // matches no field of the probes, so that values are matched against a path but not filtered
-    private static final JsonFilter FILTER = new JsonFilter(-1, -1, Collections.singletonList("$..none"), null,
-            JsonFilter.DEFAULT_ANONYMIZE_RAW_JSON_VALUE, JsonFilter.DEFAULT_PRUNE_RAW_JSON_VALUE, JsonFilter.DEFAULT_TRUNCATE_MESSAGE);
+    // in holders, so that each sink is checked the first time it is used
+    private static final class Unfiltered {
 
-    private static final Throwable FAILURE = check();
+        private static final Throwable FAILURE = check(false);
+
+        private Unfiltered() {
+        }
+    }
+
+    private static final class Filtering {
+
+        // matches no field of the probes, so that values are matched against a path but not filtered
+        private static final JsonFilter FILTER = new JsonFilter(-1, -1, Collections.singletonList("$..none"), null,
+                JsonFilter.DEFAULT_ANONYMIZE_RAW_JSON_VALUE, JsonFilter.DEFAULT_PRUNE_RAW_JSON_VALUE, JsonFilter.DEFAULT_TRUNCATE_MESSAGE);
+
+        private static final Throwable FAILURE = check(true);
+
+        private Filtering() {
+        }
+
+        private static void verify(Message message, Plans plans, MessagePlan plan, byte[] bytes) throws IOException {
+            FilteringTranscodingProtobufJsonWriter transcoder = new FilteringTranscodingProtobufJsonWriter(plans, TYPE_REGISTRY, FILTER);
+            String expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, new FilteredJsonValues(FILTER, generator), null, null, 0, false));
+            compare(message, FilteringCodedOutputStreamJsonSink.class, expected,
+                    generator -> new FilteringCodedOutputStreamJsonSink(plans, transcoder, new FilteredJsonValues(FILTER, generator)).write(message));
+        }
+    }
 
     private CodedOutputStreamConventions() {
     }
 
     /**
-     * Check that the sinks write the probe messages correctly.
+     * Check that a sink writes the probe messages correctly.
      *
+     * @param filtering true for the sink of the filtering writers, false for the sink of the unfiltered writers
      * @throws IllegalStateException if not
      */
 
-    static void verify() {
-        if (FAILURE != null) {
-            throw new IllegalStateException("The stream writers do not handle how this protobuf version writes messages to a CodedOutputStream", FAILURE);
+    static void verify(boolean filtering) {
+        Throwable failure = filtering ? Filtering.FAILURE : Unfiltered.FAILURE;
+        if (failure != null) {
+            throw new IllegalStateException("The " + (filtering ? "filtering" : "unfiltered")
+                    + " stream writers do not handle how this protobuf version writes messages to a CodedOutputStream", failure);
         }
     }
 
-    private static Throwable check() {
+    private static Throwable check(boolean filtering) {
         try {
             for (Message probe : probes()) {
-                verify(probe, probe);
-                verify(probe, DynamicMessage.parseFrom(probe.getDescriptorForType(), probe.toByteString()));
+                verify(probe, probe, filtering);
+                verify(probe, DynamicMessage.parseFrom(probe.getDescriptorForType(), probe.toByteString()), filtering);
             }
             return null;
         } catch (RuntimeException | IOException | LinkageError e) {
@@ -138,20 +164,34 @@ final class CodedOutputStreamConventions {
      */
 
     static void verify(Message probe, Message message) throws IOException {
+        verify(probe, message, false);
+        verify(probe, message, true);
+    }
+
+    /**
+     * Write a message with a sink, and compare with what the transcoding writer writes for a probe.
+     *
+     * @param probe     the probe, of which the binary form is transcoded
+     * @param message   the message the sink writes: the probe, or a message which writes the same fields
+     * @param filtering true for the sink of the filtering writers, false for the sink of the unfiltered writers
+     * @throws IllegalStateException if the sink fails or writes different JSON
+     * @throws IOException           if transcoding fails
+     */
+
+    static void verify(Message probe, Message message, boolean filtering) throws IOException {
         Plans plans = new Plans();
         MessagePlan plan = plans.get(probe.getDescriptorForType());
         byte[] bytes = probe.toByteArray();
 
         // the transcoders write the probes as regular messages, like the sinks do
-        TranscodingProtobufJsonWriter transcoder = new TranscodingProtobufJsonWriter(plans, TYPE_REGISTRY);
-        FilteringTranscodingProtobufJsonWriter filteringTranscoder = new FilteringTranscodingProtobufJsonWriter(plans, TYPE_REGISTRY, FILTER);
-        String expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, generator, null));
-        String expectedFiltered = write(generator -> filteringTranscoder.writeMessage(bytes, 0, bytes.length, plan, new FilteredJsonValues(FILTER, generator), null, null, 0, false));
-
-        compare(message, CodedOutputStreamJsonSink.class, expected,
-                generator -> new CodedOutputStreamJsonSink(plans, transcoder, generator).write(message));
-        compare(message, FilteringCodedOutputStreamJsonSink.class, expectedFiltered,
-                generator -> new FilteringCodedOutputStreamJsonSink(plans, filteringTranscoder, new FilteredJsonValues(FILTER, generator)).write(message));
+        if (filtering) {
+            Filtering.verify(message, plans, plan, bytes);
+        } else {
+            TranscodingProtobufJsonWriter transcoder = new TranscodingProtobufJsonWriter(plans, TYPE_REGISTRY);
+            String expected = write(generator -> transcoder.writeMessage(bytes, 0, bytes.length, plan, generator, null));
+            compare(message, CodedOutputStreamJsonSink.class, expected,
+                    generator -> new CodedOutputStreamJsonSink(plans, transcoder, generator).write(message));
+        }
     }
 
     private static void compare(Message message, Class<?> sink, String expected, Write write) throws IOException {

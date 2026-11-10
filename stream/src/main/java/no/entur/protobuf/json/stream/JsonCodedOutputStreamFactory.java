@@ -36,8 +36,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
  * If the subclass cannot be generated, e.g. for an incompatible protobuf version, or if protobuf is loaded by a class loader
  * which cannot see this library, or if the sinks do not handle how this protobuf version writes messages (see
  * {@linkplain CodedOutputStreamConventions}), the writers delegate to the transcoding writers, which write the same JSON
- * (more slowly), rather than fail or drop or garble fields. This is checked once, when the first writer is created, and
- * logged once as a warning (see {@linkplain #isAvailable()}).
+ * (more slowly), rather than fail or drop or garble fields. This is checked once for the unfiltered and once for the
+ * filtering writers, when the first such writer is created, and logged as a warning (see {@linkplain #isAvailable(boolean)}).
  */
 
 final class JsonCodedOutputStreamFactory {
@@ -68,32 +68,35 @@ final class JsonCodedOutputStreamFactory {
     }
 
     /**
-     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created, and that the sinks handle how this protobuf
-     * version writes messages to them.
+     * Check that JSON-writing {@linkplain CodedOutputStream}s can be created, and that a sink handles how this protobuf
+     * version writes messages to it.
      *
+     * @param filtering true for the sink of the filtering writers, false for the sink of the unfiltered writers
      * @throws IllegalStateException if not
      */
 
-    static void verify() {
+    static void verify(boolean filtering) {
         verifyConstructor();
-        CodedOutputStreamConventions.verify();
+        CodedOutputStreamConventions.verify(filtering);
     }
 
     /**
-     * Whether the stream writers can write messages themselves (see {@linkplain #verify()}). Checked once, when the first
-     * writer is created. If not, the reason is logged once as a warning, and the writers delegate to the transcoding writers.
+     * Whether the unfiltered or the filtering stream writers can write messages themselves (see {@linkplain #verify(boolean)}).
+     * Checked once for each, when the first such writer is created. If not, the reason is logged once as a warning, and the
+     * writers delegate to the transcoding writers.
      *
+     * @param filtering true for the filtering writers, false for the unfiltered writers
      * @return true if JSON-writing {@linkplain CodedOutputStream}s can be used
      */
 
-    static boolean isAvailable() {
-        return Availability.AVAILABLE;
+    static boolean isAvailable(boolean filtering) {
+        return filtering ? FilteringAvailability.AVAILABLE : Availability.AVAILABLE;
     }
 
     /**
      * Run a check, and log a warning if it fails.
      *
-     * @param check the check, e.g. {@linkplain #verify()}
+     * @param check the check, e.g. {@linkplain #verify(boolean)}
      * @return true if the check passed
      */
 
@@ -108,12 +111,21 @@ final class JsonCodedOutputStreamFactory {
         }
     }
 
+    // the convention check creates sinks, which use the constructor, so it is checked after the factory is initialized
+
     private static final class Availability {
 
-        // the convention check creates sinks, which use the constructor, so it is checked after the factory is initialized
-        private static final boolean AVAILABLE = check(JsonCodedOutputStreamFactory::verify);
+        private static final boolean AVAILABLE = check(() -> verify(false));
 
         private Availability() {
+        }
+    }
+
+    private static final class FilteringAvailability {
+
+        private static final boolean AVAILABLE = check(() -> verify(true));
+
+        private FilteringAvailability() {
         }
     }
 
@@ -124,7 +136,7 @@ final class JsonCodedOutputStreamFactory {
     }
 
     static CodedOutputStream create(CodedOutputStreamSink sink) {
-        // not verify(): the convention check creates sinks
+        // not verify(boolean): the convention check creates sinks
         verifyConstructor();
         try {
             return (CodedOutputStream) CONSTRUCTOR.invokeExact(sink);
