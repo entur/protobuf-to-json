@@ -9,9 +9,10 @@ import java.io.UncheckedIOException;
  * The full protobuf implementations write to a Jackson 3 generator, the lite implementation to a Jackson 2 generator.
  * <br><br>
  * No checked exceptions are thrown. An {@linkplain java.io.IOException} is wrapped in an {@linkplain UncheckedIOException}:
- * a {@code com.google.protobuf.InvalidProtocolBufferException} for a {@code google.protobuf.Any} whose type is not
- * registered (unless unresolved Any values are written as such, see {@linkplain UnresolvedAny}) or whose content cannot be
- * parsed, and the exceptions of Jackson 2 generators. Jackson 3 generators throw their own unchecked exceptions
+ * a {@code com.google.protobuf.InvalidProtocolBufferException} for a {@code google.protobuf.Any} with an invalid type URL
+ * (also when unresolved Any values are written as such, see {@linkplain UnresolvedAny}), whose type is not registered
+ * (unless unresolved Any values are written as such), or whose content cannot be parsed, and the exceptions of Jackson 2
+ * generators. Jackson 3 generators throw their own unchecked exceptions
  * ({@code tools.jackson.core.JacksonException}), which are not wrapped.
  * <br><br>
  * Implementations are thread-safe.

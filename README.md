@@ -57,9 +57,10 @@ With a library which writes JSON with another Jackson version, use `writeAsStrin
 value.
 
 `write(..)` and `writeAsString(..)` throw no checked exceptions. If a message cannot be written, they throw an
-`UncheckedIOException`, whose cause is an `InvalidProtocolBufferException` for a `google.protobuf.Any` whose type is not
-registered (see [Unresolved Any](#unresolved-any)) or whose content cannot be parsed, or the `IOException` of a Jackson 2
-generator. Jackson 3 generators throw their own unchecked `JacksonException`, which is not wrapped.
+`UncheckedIOException`, whose cause is an `InvalidProtocolBufferException` for a `google.protobuf.Any` with an invalid
+type URL (without a `/`), whose type is not registered (unless `UnresolvedAny.VALUE` is set, see
+[Unresolved Any](#unresolved-any)), or whose content cannot be parsed, or the `IOException` of a Jackson 2 generator.
+Jackson 3 generators throw their own unchecked `JacksonException`, which is not wrapped.
 
 ## Protobuf (regular) message writers
 Alternative writers, with different trade-offs between speed, memory usage and JIT compilation:

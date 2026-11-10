@@ -202,6 +202,9 @@ public class AccessorProtobufJsonWriter implements ProtobufJsonWriter<MessageOrB
                 }
             } catch (UncheckedIOException e) {
                 throw new IllegalArgumentException("Unable to write a warmup message", e.getCause());
+            } catch (RuntimeException e) {
+                // e.g. a JacksonException
+                throw new IllegalArgumentException("Unable to write a warmup message", e);
             }
         }
     }

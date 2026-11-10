@@ -19,6 +19,8 @@ import com.google.protobuf_test_messages.proto3.TestMessagesProto3.ForeignMessag
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedEnum;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedMessage;
+import java.io.IOException;
+import java.io.OutputStream;
 import no.entur.protobuf.json.filter.JsonFilter;
 import no.entur.protobuf.json.filter.ReferenceFilter;
 import no.entur.protobuf.json.path.PathExpressions;
@@ -27,6 +29,7 @@ import no.entur.protobuf.json.test.FilterTestMessages;
 import no.entur.protobuf.json.test.RandomMessages;
 import no.entur.protobuf.json.test.UntruncatedValues;
 import org.junit.jupiter.api.Test;
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.JsonNode;
 
@@ -264,6 +267,24 @@ public abstract class AbstractFilteringProtobufJsonWriterTest {
             InvalidProtocolBufferException e = TestSupport.assertInvalidProtocolBuffer(() -> TestSupport.writeBytes(writer, value));
             assertThat(e).hasMessageThat().isEqualTo("Invalid type url found: " + invalid);
         }
+    }
+
+    @Test
+    public void generatorFailuresAreNotWrapped() {
+        // Jackson 3 generators report I/O failures with unchecked exceptions of their own
+        OutputStream failing = new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("failing");
+            }
+        };
+        // larger than the buffer of the generator
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalString("x".repeat(100_000)).build();
+        ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer = filtered(Filter.anonymize("$..optionalInt32"));
+        JsonGenerator generator = TestSupport.MAPPER.createGenerator(failing);
+
+        JacksonException e = assertThrows(JacksonException.class, () -> writer.write(message, generator));
+        assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("failing");
     }
 
     @Test
