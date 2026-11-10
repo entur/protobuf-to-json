@@ -272,27 +272,27 @@ Time per message in microseconds:
 
 | Writer | small (0.2 KB) | medium (14 KB) | large (38 KB) | xlarge (127 KB) | xxlarge (254 KB) |
 |---|---|---|---|---|---|
-| `JsonFormat` | 4.48 | 42.3 | 127 | 369 | 755 |
-| HubSpot jackson-datatype-protobuf | 4.20 | 39.9 | 108 | 254 | 537 |
-| curioswitch protobuf-jackson | 0.910 | 14.9 | 50.3 | 140 | 285 |
-| transcode | 0.853 | 17.8 | 45.8 | 162 | 320 |
-| stream | 0.673 | **9.58** | 29.6 | 85.5 | 172 |
-| accessor | **0.449** | 9.68 | **24.3** | **72.2** | **143** |
-| `MessageLiteToJson` (lite messages) | 48.7 | 85.5 | 584 | 761 | 1494 |
-| lite | 2.01 | 22.3 | 54.5 | 234 | 478 |
+| `JsonFormat` | 4.48 | 42.9 | 127 | 368 | 757 |
+| HubSpot jackson-datatype-protobuf | 4.20 | 39.9 | 109 | 252 | 528 |
+| curioswitch protobuf-jackson | 0.911 | 14.8 | 50.0 | 141 | 283 |
+| transcode | 0.860 | 17.3 | 43.9 | 159 | 319 |
+| stream | 0.799 | **9.46** | 29.4 | 82.8 | 172 |
+| accessor | **0.456** | 9.51 | **24.2** | **71.7** | **142** |
+| `MessageLiteToJson` (lite messages) | 49.6 | 83.7 | 582 | 758 | 1480 |
+| lite | 2.00 | 23.2 | 54.0 | 233 | 468 |
 
 Serialized to binary (`toByteArray()`) and then written as JSON, like an application which sends a message and logs it, the
 total time per message in microseconds:
 
 | Writer | small (0.2 KB) | medium (14 KB) | large (38 KB) | xlarge (127 KB) | xxlarge (254 KB) |
 |---|---|---|---|---|---|
-| `JsonFormat` | 5.06 | 50.2 | 146 | 486 | 929 |
-| HubSpot jackson-datatype-protobuf | 4.82 | 49.0 | 125 | 350 | 721 |
-| curioswitch protobuf-jackson | 1.35 | 24.4 | 65.2 | 237 | 474 |
-| transcode | 1.29 | 26.2 | 66.5 | 264 | 521 |
-| stream | 1.22 | 18.9 | 48.6 | 169 | 363 |
-| accessor | **1.01** | **18.5** | **41.8** | **168** | **333** |
-| binary only (`toByteArray()`) | 0.379 | 8.49 | 14.1 | 95.1 | 191 |
+| `JsonFormat` | 5.19 | 50.3 | 145 | 464 | 929 |
+| HubSpot jackson-datatype-protobuf | 4.78 | 48.5 | 130 | 348 | 718 |
+| curioswitch protobuf-jackson | 1.34 | 24.1 | 66.4 | 235 | 471 |
+| transcode | 1.28 | 25.5 | 65.2 | 260 | 520 |
+| stream | 1.23 | 20.1 | 47.9 | **165** | 365 |
+| accessor | **0.991** | **18.2** | **41.6** | 166 | **330** |
+| binary only (`toByteArray()`) | 0.389 | 8.43 | 14.0 | 94.7 | 189 |
 
 ### Memory
 Kilobytes allocated per message:
@@ -302,10 +302,10 @@ Kilobytes allocated per message:
 | `JsonFormat` | 7.38 | 100 | 353 | 901 | 1809 |
 | HubSpot jackson-datatype-protobuf | 4.22 | 8.69 | 19.6 | 70.9 | 143 |
 | curioswitch protobuf-jackson | 2.95 | 7.93 | 0.899 | 61.5 | 122 |
-| transcode | 2.14 | 26.0 | 48.8 | 234 | 471 |
-| stream | 2.07 | 1.70 | 0.649 | 8.88 | 17.0 |
+| transcode | 2.15 | 26.0 | 48.8 | 234 | 471 |
+| stream | 3.29 | 1.70 | 0.649 | 8.88 | 17.0 |
 | accessor | 1.80 | **1.39** | **0.406** | **8.58** | **16.7** |
-| `MessageLiteToJson` (lite messages) | 225 | 302 | 3076 | 2579 | 5151 |
+| `MessageLiteToJson` (lite messages) | 225 | 303 | 3076 | 2579 | 5154 |
 | lite | **1.32** | 2.05 | 0.524 | 14.7 | 29.8 |
 
 The accessor writer also uses about 1 MB of metaspace for generating code, and about 2 KB per field of the message types
