@@ -27,6 +27,7 @@ public final class ProtobufJsonWriterSupport {
      * @param writer  writer
      * @param message message or builder
      * @return JSON
+     * @throws java.io.UncheckedIOException if the message cannot be written, see {@linkplain ProtobufJsonWriter}
      */
 
     public static String writeAsString(ProtobufJsonWriter<MessageOrBuilder, JsonGenerator> writer, MessageOrBuilder message) {

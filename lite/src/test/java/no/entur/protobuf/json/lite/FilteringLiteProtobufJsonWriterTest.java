@@ -17,6 +17,9 @@ import com.google.protobuf_test_messages.proto2.TestMessagesProto2.TestAllTypesP
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedEnum;
 import com.google.protobuf_test_messages.proto3.TestMessagesProto3.TestAllTypesProto3.NestedMessage;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import no.entur.protobuf.json.ProtobufJsonWriter;
 import no.entur.protobuf.json.UnresolvedAny;
 import no.entur.protobuf.json.filter.ReferenceFilter;
@@ -40,6 +43,7 @@ import java.util.Set;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * The filtering writer writes the same as filtering the output of the plain writer with the {@linkplain ReferenceFilter},
@@ -125,6 +129,28 @@ public class FilteringLiteProtobufJsonWriterTest {
             messages.add(new TestMessage(columns[0], message, new HashSet<>(untruncated)));
         }
         return messages;
+    }
+
+    @Test
+    public void generatorFailuresAreWrapped() throws IOException {
+        // Jackson 2 generators report I/O failures with IOException
+        OutputStream failing = new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                throw new IOException("failing");
+            }
+        };
+        // larger than the buffer of the generator
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < 100_000; i++) {
+            text.append('x');
+        }
+        TestAllTypesProto3 message = TestAllTypesProto3.newBuilder().setOptionalString(text.toString()).build();
+        ProtobufJsonWriter<MessageLiteOrBuilder, JsonGenerator> writer = LiteTestSupport.newBuilder().withAnonymizePaths("$..optionalInt32").build();
+        JsonGenerator generator = LiteTestSupport.FACTORY.createGenerator(failing);
+
+        UncheckedIOException e = assertThrows(UncheckedIOException.class, () -> writer.write(message, generator));
+        assertThat(e).hasCauseThat().hasMessageThat().isEqualTo("failing");
     }
 
     @Test
