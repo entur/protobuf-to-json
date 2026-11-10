@@ -106,9 +106,10 @@ public class TranscodingProtobufJsonWriter implements ProtobufJsonWriter<Message
 
     private static final byte[] EMPTY = new byte[0];
 
-    private static final SerializableString TYPE_NAME = FilteredJsonValues.TYPE_NAME;
-    private static final SerializableString VALUE_NAME = FilteredJsonValues.VALUE_NAME;
-    private static final SerializableString UNRESOLVED_VALUE_NAME = FilteredJsonValues.UNRESOLVED_VALUE_NAME;
+    // from JsonValues, not FilteredJsonValues, so that this writer does not load the filtering classes
+    private static final SerializableString TYPE_NAME = JsonValues.TYPE_NAME;
+    private static final SerializableString VALUE_NAME = JsonValues.VALUE_NAME;
+    private static final SerializableString UNRESOLVED_VALUE_NAME = JsonValues.UNRESOLVED_VALUE_NAME;
 
     private final Plans plans;
     private final JsonFormat.TypeRegistry typeRegistry;

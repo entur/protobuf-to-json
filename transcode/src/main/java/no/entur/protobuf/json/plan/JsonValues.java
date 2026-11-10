@@ -7,6 +7,7 @@ import no.entur.protobuf.json.plan.MessagePlan.EnumNames;
 import no.entur.protobuf.json.plan.MessagePlan.FieldInfo;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.SerializableString;
+import tools.jackson.core.io.SerializedString;
 import tools.jackson.core.json.UTF8JsonGenerator;
 import tools.jackson.core.util.JsonGeneratorDelegate;
 
@@ -23,6 +24,13 @@ import java.util.Base64;
  */
 
 public final class JsonValues {
+
+    /** the type URL of a google.protobuf.Any */
+    public static final SerializableString TYPE_NAME = new SerializedString("@type");
+    /** the value of a google.protobuf.Any of a well-known type */
+    public static final SerializableString VALUE_NAME = new SerializedString("value");
+    /** the payload of an unresolved google.protobuf.Any */
+    public static final SerializableString UNRESOLVED_VALUE_NAME = new SerializedString("@value");
 
     /** strings up to this length are written from a buffer, see {@linkplain #writeString(JsonGenerator, String)} */
     private static final int MAX_BUFFERED_STRING_LENGTH = 1024;

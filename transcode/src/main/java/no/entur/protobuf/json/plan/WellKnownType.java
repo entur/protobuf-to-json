@@ -25,29 +25,27 @@ import com.google.protobuf.Value;
 
 public enum WellKnownType {
 
-    ANY(Any.getDescriptor()),
-    TIMESTAMP(Timestamp.getDescriptor()),
-    DURATION(Duration.getDescriptor()),
-    FIELD_MASK(FieldMask.getDescriptor()),
-    STRUCT(Struct.getDescriptor()),
-    VALUE(Value.getDescriptor()),
-    LIST_VALUE(ListValue.getDescriptor()),
-    BOOL_VALUE(BoolValue.getDescriptor()),
-    INT32_VALUE(Int32Value.getDescriptor()),
-    UINT32_VALUE(UInt32Value.getDescriptor()),
-    INT64_VALUE(Int64Value.getDescriptor()),
-    UINT64_VALUE(UInt64Value.getDescriptor()),
-    STRING_VALUE(StringValue.getDescriptor()),
-    BYTES_VALUE(BytesValue.getDescriptor()),
-    FLOAT_VALUE(FloatValue.getDescriptor()),
-    DOUBLE_VALUE(DoubleValue.getDescriptor());
+    ANY("google.protobuf.Any"),
+    TIMESTAMP("google.protobuf.Timestamp"),
+    DURATION("google.protobuf.Duration"),
+    FIELD_MASK("google.protobuf.FieldMask"),
+    STRUCT("google.protobuf.Struct"),
+    VALUE("google.protobuf.Value"),
+    LIST_VALUE("google.protobuf.ListValue"),
+    BOOL_VALUE("google.protobuf.BoolValue"),
+    INT32_VALUE("google.protobuf.Int32Value"),
+    UINT32_VALUE("google.protobuf.UInt32Value"),
+    INT64_VALUE("google.protobuf.Int64Value"),
+    UINT64_VALUE("google.protobuf.UInt64Value"),
+    STRING_VALUE("google.protobuf.StringValue"),
+    BYTES_VALUE("google.protobuf.BytesValue"),
+    FLOAT_VALUE("google.protobuf.FloatValue"),
+    DOUBLE_VALUE("google.protobuf.DoubleValue");
 
     private final String fullName;
-    private final Descriptor descriptor;
 
-    WellKnownType(Descriptor descriptor) {
-        this.fullName = descriptor.getFullName();
-        this.descriptor = descriptor;
+    WellKnownType(String fullName) {
+        this.fullName = fullName;
     }
 
     /**
@@ -70,7 +68,8 @@ public enum WellKnownType {
 
     /**
      * The descriptor of a well-known type which comes with protobuf-java, e.g. for a google.protobuf.Any whose type is not
-     * in the type registry.
+     * in the type registry. Only then is the generated class of the type initialized, rather than those of all the types when
+     * the first writer is created.
      *
      * @param fullName full name of the type, e.g. google.protobuf.Duration
      * @return descriptor, or null if the type is not a well-known type with a special JSON mapping
@@ -82,9 +81,30 @@ public enum WellKnownType {
         }
         for (WellKnownType type : values()) {
             if (type.fullName.equals(fullName)) {
-                return type.descriptor;
+                return type.getDescriptor();
             }
         }
         return null;
+    }
+
+    private Descriptor getDescriptor() {
+        return switch (this) {
+            case ANY -> Any.getDescriptor();
+            case TIMESTAMP -> Timestamp.getDescriptor();
+            case DURATION -> Duration.getDescriptor();
+            case FIELD_MASK -> FieldMask.getDescriptor();
+            case STRUCT -> Struct.getDescriptor();
+            case VALUE -> Value.getDescriptor();
+            case LIST_VALUE -> ListValue.getDescriptor();
+            case BOOL_VALUE -> BoolValue.getDescriptor();
+            case INT32_VALUE -> Int32Value.getDescriptor();
+            case UINT32_VALUE -> UInt32Value.getDescriptor();
+            case INT64_VALUE -> Int64Value.getDescriptor();
+            case UINT64_VALUE -> UInt64Value.getDescriptor();
+            case STRING_VALUE -> StringValue.getDescriptor();
+            case BYTES_VALUE -> BytesValue.getDescriptor();
+            case FLOAT_VALUE -> FloatValue.getDescriptor();
+            case DOUBLE_VALUE -> DoubleValue.getDescriptor();
+        };
     }
 }

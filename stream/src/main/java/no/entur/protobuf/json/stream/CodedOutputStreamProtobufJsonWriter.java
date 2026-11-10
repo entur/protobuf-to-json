@@ -77,7 +77,7 @@ public class CodedOutputStreamProtobufJsonWriter implements ProtobufJsonWriter<M
     }
 
     protected CodedOutputStreamProtobufJsonWriter(JsonFormat.TypeRegistry typeRegistry, UnresolvedAny unresolvedAny) {
-        this(typeRegistry, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable());
+        this(typeRegistry, unresolvedAny, JsonCodedOutputStreamFactory.isAvailable(false));
     }
 
     /**
