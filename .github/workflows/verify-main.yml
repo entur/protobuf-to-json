@@ -6,7 +6,7 @@ on:
 
 jobs:
   validate-maven-build:
-    uses: entur/abt-gha-public/.github/workflows/maven-open-source-verify.yml@v2.0
+    uses: entur/abt-gha-public/.github/workflows/maven-open-source-verify.yml@v2
     permissions:
       contents: read
     # no secrets necessary
@@ -15,7 +15,7 @@ jobs:
       java-version: 25
 
   validate-oldest-protobuf:
-    uses: entur/abt-gha-public/.github/workflows/maven-open-source-verify.yml@v2.0
+    uses: entur/abt-gha-public/.github/workflows/maven-open-source-verify.yml@v2
     permissions:
       contents: read
     # no secrets necessary
